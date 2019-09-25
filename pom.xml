@@ -10,15 +10,6 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <source>7</source>
-                    <target>7</target>
-                </configuration>
-                <version>3.8.1</version>
-            </plugin>
-            <plugin>
                 <groupId>com.googlecode.addjars-maven-plugin</groupId>
                 <artifactId>addjars-maven-plugin</artifactId>
                 <version>1.0.5</version>
@@ -37,9 +28,58 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                        <configuration>
+                            <classifier>spring-boot</classifier>
+                            <mainClass>
+                                semanticweb.sparql.SparqlUtils
+                            </mainClass>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+<!--            <plugin>-->
+<!--                <groupId>com.jolira</groupId>-->
+<!--                <artifactId>onejar-maven-plugin</artifactId>-->
+<!--                <executions>-->
+<!--                    <execution>-->
+<!--                        <configuration>-->
+<!--                            <mainClass>semanticweb.sparql.SparqlUtils-->
+<!--                            </mainClass>-->
+<!--                            <attachToBuild>true</attachToBuild>-->
+<!--                            <filename>-->
+<!--                                ${project.build.finalName}.${project.packaging}-->
+<!--                            </filename>-->
+<!--                        </configuration>-->
+<!--                        <goals>-->
+<!--                            <goal>one-jar</goal>-->
+<!--                        </goals>-->
+<!--                    </execution>-->
+<!--                </executions>-->
+<!--            </plugin>-->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>7</source>
+                    <target>7</target>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
     <dependencies>
+        <dependency>
+            <groupId>com.jolira</groupId>
+            <artifactId>onejar-maven-plugin</artifactId>
+            <version>1.4.4</version>
+        </dependency>
         <!-- https://mvnrepository.com/artifact/org.apache.jena/apache-jena-libs -->
         <dependency>
             <groupId>org.apache.jena</groupId>
