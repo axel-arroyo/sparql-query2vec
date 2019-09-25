@@ -21,7 +21,7 @@
                         <configuration>
                             <resources>
                                 <resource>
-                                    <directory>/home/daniel/Documentos/ML/rhassan/graph-edit-distance/lib</directory>
+                                    <directory>lib</directory>
                                 </resource>
                             </resources>
                         </configuration>
@@ -31,10 +31,16 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
-                <version>2.5.5</version>
+                <version>2.6</version>
                 <configuration>
+<!--                    <finalName>-->
+<!--                        graph-edit-distance-->
+<!--                    </finalName>-->
+                    <appendAssemblyId>
+                        false
+                    </appendAssemblyId>
                     <descriptorRefs>
-                        <descriptorRef>full-deps</descriptorRef>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
                     </descriptorRefs>
                     <archive>
                         <manifest>
@@ -62,11 +68,6 @@
         </plugins>
     </build>
     <dependencies>
-        <dependency>
-            <groupId>com.jolira</groupId>
-            <artifactId>onejar-maven-plugin</artifactId>
-            <version>1.4.4</version>
-        </dependency>
         <!-- https://mvnrepository.com/artifact/org.apache.jena/apache-jena-libs -->
         <dependency>
             <groupId>org.apache.jena</groupId>
