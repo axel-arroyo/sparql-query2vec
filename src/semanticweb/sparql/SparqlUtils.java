@@ -960,7 +960,7 @@ public static void main(String[] args) throws Exception {
 	GraphBuildAction task = new GraphBuildAction(queries,0,queries.size());
 	ArrayList<Map> grafos = pool.invoke(task);
 
-	EditDistanceAction task2 = new EditDistanceAction(grafos,output,cores,0,queries.size(),false);
+	EditDistanceAction task2 = new EditDistanceAction(grafos,output,cores,0,grafos.size(),false);
 	pool.invoke(task2);
 
 	String a = "";
