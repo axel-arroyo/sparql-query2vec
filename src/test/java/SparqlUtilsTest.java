@@ -1,5 +1,3 @@
-package test;
-
 import com.hp.hpl.jena.graph.Triple;
 //import org.junit.Test;
 import org.junit.jupiter.api.Test;

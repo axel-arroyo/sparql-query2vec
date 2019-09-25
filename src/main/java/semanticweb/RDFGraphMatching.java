@@ -2,7 +2,6 @@ package semanticweb;
 
 import ged.AlgorithmConfig;
 
-import java.io.ObjectInputStream.GetField;
 import java.util.concurrent.TimeUnit;
 
 import javax.naming.OperationNotSupportedException;
