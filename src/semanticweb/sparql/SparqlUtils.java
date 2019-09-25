@@ -16,6 +16,7 @@ import javax.naming.OperationNotSupportedException;
 import liquibase.util.csv.opencsv.CSVReader;
 import nanoxml.XMLElement;
 import semanticweb.EditDistanceAction;
+import semanticweb.GraphBuildAction;
 import semanticweb.RDF2GXL;
 import semanticweb.RDFGraphMatching;
 import util.Graph;
@@ -46,7 +47,7 @@ public class SparqlUtils {
 	final public static String SPARQL_VAR_NS = "http://wimmics.inria.fr/kolflow/qp#";
     public static Model model;
     public static String prefixes = "";
-	public static ArrayList<String[]> queriesError = new ArrayList<>();
+	public static ArrayList<String[]> queriesError = new ArrayList();
     public static void getPropsAndObjectCount(){
 //		Map<String, Integer> map = new HashMap<String, Integer>();
 		ParameterizedSparqlString qs = new ParameterizedSparqlString(""+
@@ -96,7 +97,7 @@ public class SparqlUtils {
     public static ArrayList<String[]> getArrayFromCsvFile(String url, String delimiterCol, String delimiterRow) {
 		BufferedReader csvReader = null;
 		String row;
-		ArrayList<String[]> arrayList = new ArrayList<>();
+		ArrayList<String[]> arrayList = new ArrayList();
 		try {
 			csvReader = new BufferedReader(new FileReader(url));
 			while ((row = csvReader.readLine()) != null) {
@@ -118,7 +119,7 @@ public class SparqlUtils {
      */
     public static ArrayList<ArrayList<String>> getArrayQueries(String url) {
         String row;
-        ArrayList<ArrayList<String>> arrayList = new ArrayList<>();
+        ArrayList<ArrayList<String>> arrayList = new ArrayList<ArrayList<String>>();
         try {
             BufferedReader csvReader = new BufferedReader(new FileReader(url));
             while ((row = csvReader.readLine()) != null) {
@@ -140,7 +141,7 @@ public class SparqlUtils {
 	 */
 	public static ArrayList<ArrayList<String>> getArrayQueriesFromCsv(String url,boolean header, int queryColumn) {
 		String row;
-		ArrayList<ArrayList<String>> arrayList = new ArrayList<>();
+		ArrayList<ArrayList<String>> arrayList = new ArrayList<ArrayList<String>>();
 		int count = 0;
 		try {
 			BufferedReader csvReader = new BufferedReader(new FileReader(url));
@@ -175,10 +176,11 @@ public class SparqlUtils {
      *
      * @return
      */
-    public static Model getNamespaces(){
+    public static Model getNamespaces(String url){
+
         Model model = ModelFactory.createDefaultModel();
         try {
-            BufferedReader csvReader = new BufferedReader(new FileReader("/home/daniel/Documentos/Web_Semantica/Work/Sparql2vec/prefixes.txt"));
+            BufferedReader csvReader = new BufferedReader(new FileReader(url));
             String row;
             while ((row = csvReader.readLine()) != null) {
                 String[] predicates = row.split("\t");
@@ -192,6 +194,14 @@ public class SparqlUtils {
         }
         return model;
     }
+	/**
+	 *
+	 * @return
+	 */
+	public static Model getNamespaces(){
+		String url = "/home/daniel/Documentos/Web_Semantica/Work/Sparql2vec/prefixes.txt";
+		return getNamespaces(url);
+	}
     /**
      * Retrieve array of queries in vectors way
      * @param urlQueries
@@ -201,11 +211,11 @@ public class SparqlUtils {
 
         model = getNamespaces();
 
-	    ArrayList<int[]> vectors = new ArrayList<>();
+	    ArrayList<int[]> vectors = new ArrayList<int[]>();
 
         //Get features list, in [0] uri, in [1] frequency
 	    ArrayList<String[]> featuresArray = getArrayFromCsvFile(urlFeatures);
-		Map<String,Integer> featuresMap = new HashMap<>();
+		Map<String,Integer> featuresMap = new HashMap<String, Integer>();
 	    ArrayList<ArrayList<String>> featInQueryList = getArrayQueriesFromCsv(urlQueries,true,1);
 		//we use the size of array intead of -1(csv header) becouse we use extra column called others.
 	    String[] vectorheader = new String[featuresArray.size()];
@@ -469,7 +479,7 @@ public class SparqlUtils {
      */
     public static ArrayList<String> retrievePredicatesInTriples(final String s) {
 
-        final ArrayList<String> predicates = new ArrayList<>();
+        final ArrayList<String> predicates = new ArrayList<String>();
 		try {
 			final Query query = QueryFactory.create(getQueryReadyForExecution(s,true));
 			Element e = query.getQueryPattern();
@@ -854,7 +864,7 @@ public class SparqlUtils {
 		Map<String, String> pref = model.getNsPrefixMap();
 		Object[] keys = pref.keySet().toArray();
 		boolean header = true;
-		ArrayList<String> queries = new ArrayList<>();
+		ArrayList<String> queries = new ArrayList<String>();
 		int index = 0;
 		try {
 			InputStreamReader csv = new InputStreamReader(new FileInputStream(trainingQueryFile));
@@ -893,14 +903,29 @@ public class SparqlUtils {
 	}
 
 public static void main(String[] args) throws Exception {
-
-	Model model = getNamespaces();
+	String input = "";
+	String output = "";
+	String prefixes = "";
+	int cores = 1;
+		try {
+			input = args[0];
+			output = args[1];
+			prefixes = args[2];
+			cores = Integer.parseInt(args[3]);
+		}
+		catch (Exception ex) {
+			System.out.println("args[0] : Input csv \n args[1] : Output path \n args[2] : prefixes path\n args[3] : Cores to use\n");
+			return;
+		}
+	System.out.println(args[0]);
+	Model model = getNamespaces(prefixes);
 	Map<String, String> pref = model.getNsPrefixMap();
 	Object[] keys = pref.keySet().toArray();
 	boolean header = true;
-	ArrayList<String[]> queries = new ArrayList<>();
+	ArrayList<String[]> queries = new ArrayList<String[]>();
+
 	try {
-		InputStreamReader csv = new InputStreamReader(new FileInputStream("/mnt/46d157e4-f3b2-4033-90d8-ed2b2b56139e/data_queries/new/datasetlsq_30000.csv"));
+		InputStreamReader csv = new InputStreamReader(new FileInputStream(input));
 		CSVReader csvReader = new CSVReader (csv);
 		String[] record;
 		while ((record = csvReader.readNext()) != null) {
@@ -930,11 +955,14 @@ public static void main(String[] args) throws Exception {
 		e.printStackTrace();
 	}
 
-	BufferedWriter br = new BufferedWriter(new FileWriter("/mnt/46d157e4-f3b2-4033-90d8-ed2b2b56139e/data_queries/new/hungarian_distance"));
-	StringBuilder sb;
-
 	ForkJoinPool pool = new ForkJoinPool();
-	EditDistanceAction task = new EditDistanceAction(queries,0,20,false);
-	pool.invoke(task);
+
+	GraphBuildAction task = new GraphBuildAction(queries,0,queries.size());
+	ArrayList<Map> grafos = pool.invoke(task);
+
+	EditDistanceAction task2 = new EditDistanceAction(grafos,output,cores,0,queries.size(),false);
+	pool.invoke(task2);
+
+	String a = "";
 }
 }

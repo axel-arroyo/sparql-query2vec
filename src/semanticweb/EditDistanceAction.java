@@ -7,30 +7,34 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveTask;
 
 public class EditDistanceAction extends RecursiveTask {
 
     final int THRESHOLD = 2;
-    ArrayList<String[]> queries;
+    ArrayList<Map> queries;
     int indexStart, indexLast;
     StringBuilder procesado;
     boolean recursive;
+    int cores;
+    String output;
     BufferedWriter br;
     BufferedWriter br2;
 
-    public EditDistanceAction(ArrayList<String[]> queries,int indexStart,int indexLast, boolean recursive) {
+    public EditDistanceAction(ArrayList<Map> queries, String output, int cores, int indexStart, int indexLast, boolean recursive) {
         this.queries = queries;
         this.indexStart = indexStart;
         this.indexLast = indexLast;
         this.procesado = new StringBuilder();
         this.recursive = recursive;
+        this.output = output;
+        this.cores = cores;
     }
 
     private void computeSubMatrix(int indexStart,int indexLast) {
-        ArrayList<double[]> distances = new ArrayList<>();
-//        BufferedWriter br = new BufferedWriter(new FileWriter("/home/daniel/Documentos/ML/rhassan/graph-edit-distance/data/config/100/hungarian_distance"));
         StringBuilder sb = new StringBuilder();
         RDFGraphMatching matcher = new RDFGraphMatching();
         String fail_rows = "";
@@ -38,7 +42,7 @@ public class EditDistanceAction extends RecursiveTask {
         for (int i = indexStart; i < indexLast; i++) {
 
             try {
-                Graph Gi = SparqlUtils.buildSPARQL2GXLGraph(queries.get(i)[1],  "row_"+String.valueOf(i));
+                Graph Gi = (Graph) queries.get(i).get("graph");
                 for (int j = 0; j < queries.size(); j++) {
                     double dist = -1;
                     if (i == j){
@@ -47,13 +51,12 @@ public class EditDistanceAction extends RecursiveTask {
                         continue;
                     }
                     try{
-                        Graph Gj = SparqlUtils.buildSPARQL2GXLGraph(queries.get(j)[1],  "col_"+String.valueOf(j));
+                        Graph Gj = (Graph) queries.get(j).get("graph");
                         dist =  matcher.distanceBipartiteHungarian(Gi, Gj);
                     }
                     catch (Exception ex){
-                       failed_row_column.append(queries.get(j)[0]);
+                       failed_row_column.append(queries.get(j).get("id"));
                        failed_row_column.append("\n");
-//                       continue;
                     }
                     sb.append(dist);
                     sb.append(",");
@@ -63,7 +66,7 @@ public class EditDistanceAction extends RecursiveTask {
                 System.out.println(i);
             }
             catch (Exception ex){
-                failed_row_column.append(queries.get(i)[0]);
+                failed_row_column.append(queries.get(i).get("id"));
                 failed_row_column.append("\n");
                 sb.append("failrow");
                 sb.append("\n");
@@ -72,9 +75,9 @@ public class EditDistanceAction extends RecursiveTask {
             System.out.println(fail_rows);
         }
         try {
-            br = new BufferedWriter(new FileWriter("/home/daniel/Documentos/ML/rhassan/graph-edit-distance/data/config/100/hungarian_distance"+String.format("%06d", indexStart)+"_"+String.format("%06d", indexLast)+".csv"));
+            br = new BufferedWriter(new FileWriter(output+ "hungarian_distance"+String.format("%06d", indexStart)+"_"+String.format("%06d", indexLast)+".csv"));
             br.write(sb.toString());
-            br2 = new BufferedWriter(new FileWriter("/home/daniel/Documentos/ML/rhassan/graph-edit-distance/data/config/100/errors"+String.format("%06d", indexStart)+"_"+String.format("%06d", indexLast)+".txt"));
+            br2 = new BufferedWriter(new FileWriter(output+ "errors"+String.format("%06d", indexStart)+"_"+String.format("%06d", indexLast)+".txt"));
             br2.write(failed_row_column.toString());
         } catch (IOException e) {
             e.printStackTrace();
@@ -84,44 +87,26 @@ public class EditDistanceAction extends RecursiveTask {
     @Override
     protected Object compute() {
 
-        if (indexLast - indexStart < 5) {
-            computeSubMatrix(indexStart, indexLast);
+
+        if (recursive) {
+            computeSubMatrix(indexStart,indexLast);
+            System.out.println("Inicial core "+" preocesando : "+indexStart+ " - "+indexLast);
         }
         else {
+            System.out.println("Cantidad de cores "+ cores);
             int size = indexLast - indexStart;
-            int cantidadByMicro = size/4;
+            int cantidadByMicro = size/cores;
             int index1Start = indexStart;
             int index1Last = index1Start + cantidadByMicro;
+            List<EditDistanceAction> dividedTasks = new ArrayList<>();
+            for (int i = 0; i < cores; i++) {
+                dividedTasks.add(new EditDistanceAction(queries, output, cores, index1Start, index1Last, true));
+                index1Start = index1Last;
+                index1Last = index1Start + cantidadByMicro;
 
-            int index2Start = index1Last;
-            int index2Last = index2Start+cantidadByMicro;
-
-            int index3Start = index2Last;
-            int index3Last = index3Start+cantidadByMicro;
-
-            int index4Start = index3Last;
-            int index4Last = indexLast;
-
-            EditDistanceAction t1 = new EditDistanceAction(queries,index1Start,cantidadByMicro,true);
-            EditDistanceAction t2 = new EditDistanceAction(queries,index2Start,index2Last,true);
-            EditDistanceAction t3 = new EditDistanceAction(queries,index3Start,index3Last,true);
-            EditDistanceAction t4 = new EditDistanceAction(queries,index4Start,index4Last,true);
-            ForkJoinTask.invokeAll(t1,t2,t3,t4);
-
-//            t1.fork();
-//            t2.fork();
-//            t3.fork();
-//            t4.fork();
-//            t1.join();
-//            t2.join();
-//            t3.join();
-//            t4.join();
+            }
+            ForkJoinTask.invokeAll(dividedTasks);
         }
-
-
         return null;
     }
 }
-//    ForkJoinPool pool = new ForkJoinPool();
-//    EditDistanceAction task = new EditDistanceAction(queries,index1Start,cantidadByMicro);
-//        pool.invoke(task);

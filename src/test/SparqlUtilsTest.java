@@ -160,7 +160,7 @@ public class SparqlUtilsTest {
 
 
         BufferedReader br = new BufferedReader(new FileReader(file));
-        ArrayList<String[]> arrayList = new ArrayList<>();
+        ArrayList<String[]> arrayList = new ArrayList<String[]>();
         String st;
         int line = 0;
         while ((st = br.readLine()) != null)

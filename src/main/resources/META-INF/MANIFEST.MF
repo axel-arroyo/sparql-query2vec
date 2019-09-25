@@ -1,0 +1,3 @@
+Manifest-Version: 1.0
+Main-Class: semanticweb.sparql.SparqlUtils
+Class-Path: /home/daniel/Documentos/ML/rhassan/graph-edit-distance/src
