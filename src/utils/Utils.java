@@ -1,19 +1,20 @@
 package utils;
 
-import org.apache.commons.io.IOUtils;
-
 import java.io.FileInputStream;
 import java.io.IOException;
 
 
+import org.apache.commons.io.IOUtils;
+
+
 public class Utils {
-    public static String readFile(String filePath) throws IOException {
-        FileInputStream fs = new FileInputStream(filePath);
-
-        //InputStream inStream = new InputStre
-
-        return IOUtils.toString(fs);
-    }
+	public static String readFile(String filePath) throws IOException {
+		FileInputStream fs = new FileInputStream(filePath);
+		
+		//InputStream inStream = new InputStre
+		
+		return IOUtils.toString(fs);
+	}
 	
 	
 	/*
