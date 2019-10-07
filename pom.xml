@@ -44,7 +44,7 @@
                     </descriptorRefs>
                     <archive>
                         <manifest>
-                            <mainClass>semanticweb.sparql.SparqlUtils</mainClass>
+                            <mainClass>endpoint.Endpoint</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
@@ -61,8 +61,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <source>7</source>
-                    <target>7</target>
+                    <source>8</source>
+                    <target>8</target>
                 </configuration>
             </plugin>
         </plugins>
@@ -89,12 +89,6 @@
             <artifactId>weka-stable</artifactId>
             <version>3.8.3</version>
         </dependency>
-
-        <dependency>
-            <groupId>nz.ac.waikato.cms.weka</groupId>
-            <artifactId>XMeans</artifactId>
-            <version>1.0.4</version>
-        </dependency>
         <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-math3 -->
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -106,6 +100,11 @@
             <groupId>nz.ac.waikato.cms.weka</groupId>
             <artifactId>LibSVM</artifactId>
             <version>1.0.10</version>
+        </dependency>
+        <dependency>
+            <groupId>nz.ac.waikato.cms.weka</groupId>
+            <artifactId>XMeans</artifactId>
+            <version>1.0.6</version>
         </dependency>
         <dependency>
             <groupId>org.liquibase</groupId>
@@ -124,7 +123,6 @@
             <version>RELEASE</version>
             <scope>compile</scope>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/junit/junit -->
         <!-- https://mvnrepository.com/artifact/junit/junit -->
         <dependency>
             <groupId>junit</groupId>

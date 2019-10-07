@@ -191,7 +191,7 @@ public class SparqlUtils {
 
         //Get features list, in [0] uri, in [1] frequency
 	    ArrayList<String[]> featuresArray = getArrayFromCsvFile(urlFeatures);
-		Map<String,Integer> featuresMap = new HashMap<String, Integer>();
+		Map<String,Integer> featuresMap = new HashMap<>();
 	    ArrayList<ArrayList<String>> featInQueryList = getArrayQueriesFromCsv(urlQueries,true,1);
 		//we use the size of array intead of -1(csv header) becouse we use extra column called others.
 	    String[] vectorheader = new String[featuresArray.size()];
@@ -202,15 +202,13 @@ public class SparqlUtils {
 		}
 
 	    produceCsvArray2(featInQueryList,"featuresByQuery_".concat(output));
-		for (int i = 0; i < featInQueryList.size(); i++) {
-			ArrayList<String> queryArr = featInQueryList.get(i);
+		for (ArrayList<String> queryArr : featInQueryList) {
 			int[] vector = new int[featuresArray.size()];
-			for (int j = 0; j < queryArr.size(); j++) {
+			for (String s : queryArr) {
 				try {
-					int index = featuresMap.get("<" + queryArr.get(j) + ">");
+					int index = featuresMap.get("<" + s + ">");
 					vector[index]++;
-				}
-				  catch (Exception ex){
+				} catch (Exception ex) {
 					ex.printStackTrace();
 					vector[0]++;
 				}
