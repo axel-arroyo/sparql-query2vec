@@ -218,6 +218,7 @@ public class TDBExecutionAndFeature {
 		loadTrainingQueries();
 		String[] header = ProjectConfiguration.getAlgebraFeatureHeader(prop.getProperty("FeaturesList"));
 		generateAlgebraFeatures(prop.getProperty("TrainingAlgebraFeatures"), header, trainingQueries);
+		System.out.println("Precess finished.");
 	}
 	
 	private void generateAlgebraFeatures(String output, String[] header, List<String[]> queries) throws IOException {
@@ -261,6 +262,7 @@ public class TDBExecutionAndFeature {
 	}
 	
 	public static void main(String[] args) throws Exception {
+		System.out.println("Inside algebra features generation");
 		String config_file = "";
 		try{
 			config_file = args[0];

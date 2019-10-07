@@ -1,6 +1,8 @@
 package endpoint;
 
 import semanticweb.sparql.KmedoidsGenerator;
+import semanticweb.sparql.SparqlUtils;
+import semanticweb.sparql.preprocess.TDBExecutionAndFeature;
 
 public class Endpoint {
 
@@ -21,7 +23,10 @@ public class Endpoint {
                 KmedoidsGenerator.main(params);
             }
             else if (task.equals("edit-distance")){
-
+                SparqlUtils.main(params);
+            }
+            else if (task.equals("algebra-features")){
+                TDBExecutionAndFeature.main(params);
             }
         }catch (Exception ex) {
             ex.printStackTrace();
