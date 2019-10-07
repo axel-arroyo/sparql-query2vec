@@ -9,21 +9,19 @@ import semanticweb.sparql.config.ProjectConfiguration;
 import semanticweb.sparql.utils.DBPediaUtils;
 import semanticweb.sparql.utils.GeneralUtils;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.PrintStream;
+import java.io.*;
 import java.lang.reflect.Array;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class TDBExecutionAndFeature {
 	
-	private List<String> trainingQueries;
+	private List<String[]> trainingQueries;
 	private List<String> validationQueries;
 	private List<String> testQueries;
 	private Properties prop;
-	Model model;
-	boolean directTDB = false;
+	private Model model;
+	private boolean directTDB = false;
 	
 	public TDBExecutionAndFeature() throws IOException {
 		prop = new Properties();
@@ -32,32 +30,20 @@ public class TDBExecutionAndFeature {
 		//loadAllQueries();
 		
 	}
-	public void loadAllQueries() throws IOException {
-		loadTrainingQueries();		
-//		loadValidationQueries();
-//		loadTestQueries();
+	public TDBExecutionAndFeature(String config_file) throws IOException {
+		prop = new Properties();
+		prop.load(new FileInputStream(config_file));
 	}
-	
+
 	public void loadTrainingQueries() throws IOException {
 		String trainingQueryFile = prop.getProperty("TrainingQuery");
-		trainingQueries = SparqlUtils.getQueries(trainingQueryFile, new ArrayList<Integer>(Arrays.asList(1304, 2057, 5409, 7203, 7204, 2557, 2558, 4900, 8630, 9030, 9031, 9547,2497,4994,7491,9987)));
+		trainingQueries = AlgebraFeatureExtractor.getQueries(trainingQueryFile,prop.getProperty("Namespaces"), new ArrayList<>());
 	}
-
-	public void loadValidationQueries() throws IOException {
-		String validationQueryFile = prop.getProperty("ValidationQuery");
-		validationQueries = GeneralUtils.loadQuries(validationQueryFile);
-	}
-	public void loadTestQueries() throws IOException {
-		String testQueryFile = prop.getProperty("TestQuery");
-		testQueries = GeneralUtils.loadQuries(testQueryFile);
-	}	
-	
-
 	
 	public ResultSet queryTDB(String qStr) {
 		String q = DBPediaUtils.refineForDBPedia(qStr);
 		Query query = QueryFactory.create(q);
-		QueryExecution qexec = directTDB==true? QueryExecutionFactory.create(query, model): QueryExecutionFactory.sparqlService(prop.getProperty("Endpoint"), query);
+		QueryExecution qexec = directTDB ? QueryExecutionFactory.create(query, model): QueryExecutionFactory.sparqlService(prop.getProperty("Endpoint"), query);
 		ResultSet results = qexec.execSelect();
 		return results;
 
@@ -77,7 +63,7 @@ public class TDBExecutionAndFeature {
 		model.close();
 	}
 	
-	private void executeQueries(List<String> queries, String timeOutFile, String recCountOutFile) throws IOException {
+	private void executeQueries(List<String[]> queries, String timeOutFile, String recCountOutFile) throws IOException {
 		PrintStream psTime = new PrintStream(timeOutFile);
 		PrintStream psRec = new PrintStream(recCountOutFile);
 		
@@ -86,8 +72,8 @@ public class TDBExecutionAndFeature {
 		
 		
 		int count = 0;
-		for(String q:queries) {
-			String qStr = DBPediaUtils.getQueryForDBpedia(q);
+		for(String[] q:queries) {
+			String qStr = DBPediaUtils.getQueryForDBpedia(q[1]);
 			if(count%1000==0) {
 				System.out.println(count+" queries processed");
 			}
@@ -96,11 +82,6 @@ public class TDBExecutionAndFeature {
 			watch.start();
 			ResultSet results = queryTDB(qStr);
 			psTime.println(watch.elapsed(TimeUnit.MILLISECONDS));
-
-			//ResultSetRewindable rsrw = ResultSetFactory.copyResults(results);
-			//int numberOfResults = rsrw.size();
-			//psRec.println(numberOfResults);
-			
 			count++;
 		}
 		psTime.close();
@@ -113,20 +94,6 @@ public class TDBExecutionAndFeature {
 		executeQueries(trainingQueries,prop.getProperty("TDBTrainingExecutionTime"),prop.getProperty("TDBTrainingRecordCount"));
 		
 	}
-
-	public void executeValidationQueries() throws IOException {
-		System.out.println("Processing validation queries");
-		
-		executeQueries(validationQueries,prop.getProperty("TDBValidationExecutionTime"),prop.getProperty("TDBValidationRecordCount"));
-		
-	}
-	
-	public void executeTestQueries() throws IOException {
-		System.out.println("Processing test queries");
-		
-		executeQueries(testQueries,prop.getProperty("TDBTestExecutionTime"),prop.getProperty("TDBTestRecordCount"));
-		
-	}	
 	
 	public void executeDirectTDB() {
 		
@@ -136,14 +103,10 @@ public class TDBExecutionAndFeature {
 		
 		try {
 			executeTrainingQueries();
-			executeValidationQueries();
-			executeTestQueries();
 		}
 		catch(Exception e) {
 			e.printStackTrace();
 		}
-		
-		
 		closeModel();
 		
 	}
@@ -153,16 +116,12 @@ public class TDBExecutionAndFeature {
 		queryTDB("select * where {<http://dbpedia.org/resource/Berlin> ?p ?o}");
 		try {
 			executeTrainingQueries();
-			executeValidationQueries();
-			executeTestQueries();
 		}
 		catch(Exception e) {
 			e.printStackTrace();
 		}		
 	}
-	
-	
-	
+
 	public void executeRandomlySelectedQueries() throws IOException {
 		PrintStream psTime = new PrintStream(prop.getProperty("TDBTrainingExecutionTime"));
 		PrintStream psRec = new PrintStream(prop.getProperty("TDBTrainingRecordCount"));
@@ -177,19 +136,15 @@ public class TDBExecutionAndFeature {
 		
 		int count = 0;
 		FileInputStream fis = new FileInputStream(prop.getProperty("QueryFile"));
-		//FileInputStream fis = new FileInputStream(prop.getProperty("TestQuerySmall"));
-		
+
 		Scanner in = new Scanner(fis);
 		
 		int totalQuery = Integer.parseInt(prop.getProperty("TotalQuery"));
 		
 		int dataSplit = (int) (totalQuery * 0.6);
 		int validationSplit = (int) (totalQuery * 0.2);
-		int testSplit = (int) (totalQuery * 0.2);
-		
+
 		while(in.hasNext()) {
-			//System.out.println("Processing query:"+count);
-			
 			if(count>=totalQuery) break;
 			
 			if(count == dataSplit) {
@@ -214,19 +169,11 @@ public class TDBExecutionAndFeature {
 				psTime = new PrintStream(prop.getProperty("TDBTestExecutionTime"));
 				psRec = new PrintStream(prop.getProperty("TDBTestRecordCount"));					
 			}
-			
+
 			String line = in.nextLine();
 			String[] ss = line.split(" ");
 			String q = ss[6].substring(1, ss[6].length()-1);
-			
-			//System.out.println(line);
-			//queries.add(line);
-	
-
 			String qStr = DBPediaUtils.getQueryForDBpedia(q);
-			
-
-			
 			watch.reset();
 			watch.start();
 			try {
@@ -234,14 +181,12 @@ public class TDBExecutionAndFeature {
 				ResultSet results = queryTDB(qStr);
 				long elapsed = watch.elapsed(TimeUnit.MILLISECONDS);
 
-
 				ResultSetRewindable rsrw = ResultSetFactory.copyResults(results);
 			    int numberOfResults = rsrw.size();
 			    if(numberOfResults>0) {
 					psTime.println(elapsed);
 					psQuery.println(q);
 				    psRec.println(numberOfResults);
-				
 					count++;
 			    }
 				
@@ -269,62 +214,65 @@ public class TDBExecutionAndFeature {
 		executeRandomlySelectedQueries();
 	}
 	
-	public void generateAlgebraFeatureDataset() throws IOException {
-		loadAllQueries();
-		PrintStream psTraining = new PrintStream(prop.getProperty("TrainingAlgebraFeatures"));
-//		PrintStream psValidation = new PrintStream(prop.getProperty("ValidationAlgebraFeatures"));
-//		PrintStream psTest = new PrintStream(prop.getProperty("TestAlgebraFeatures"));
-//
-		psTraining.println(ProjectConfiguration.getAlgebraFeatureHeader());
-//		psValidation.println(ProjectConfiguration.getAlgebraFeatureHeader());
-//		psTest.println(ProjectConfiguration.getAlgebraFeatureHeader());
-		
-		generateAlgebraFeatures(psTraining, trainingQueries);
-//		generateAlgebraFeatures(psValidation, validationQueries);
-//		generateAlgebraFeatures(psTest, testQueries);
-		
+	private void generateAlgebraFeatureDataset() throws IOException {
+		loadTrainingQueries();
+		String[] header = ProjectConfiguration.getAlgebraFeatureHeader(prop.getProperty("FeaturesList"));
+		generateAlgebraFeatures(prop.getProperty("TrainingAlgebraFeatures"), header, trainingQueries);
 	}
 	
-	private void generateAlgebraFeatures(PrintStream ps, List<String> queries) throws IOException {
-		
-		
-		AlgebraFeatureExtractor fe = new AlgebraFeatureExtractor();
-		
-		for(String q:queries) {
-			String queryStr = q;
-			//System.out.println(q);
-			//System.out.println(queryStr);
-
-			try {
-				double[] features = fe.extractFeatures(queryStr);
-				for(int i=0;i<features.length;i++) {
-					if(i!=0) {
-						ps.print(",");
-					}
-					ps.print(features[i]);
+	private void generateAlgebraFeatures(String output, String[] header, List<String[]> queries) throws IOException {
+		AlgebraFeatureExtractor fe = new AlgebraFeatureExtractor(header);
+		BufferedWriter br = null;
+		StringBuilder sb = new StringBuilder();
+		try {
+			br = new BufferedWriter(new FileWriter(output));
+			{
+				sb.append("query_id");
+				sb.append(",");
+				int i = 0;
+				while (i < header.length) {
+					sb.append(header[i]);
+					sb.append(",");
+					i++;
 				}
+				sb.append("\n");
 			}
-			catch (Exception ex){
-				ex.printStackTrace();
+			for(String[] q:queries) {
+				try {
+					double[] features = fe.extractFeatures(q[1]);
+					//Print Id of query.
+					sb.append(q[0]);
+					sb.append(",");
+					for (double feature : features) {
+						sb.append(feature);
+						sb.append(",");
+					}
+				}
+				catch (Exception ex){
+					ex.printStackTrace();
+				}
+				sb.append("\n");
 			}
-
-			ps.println();
+			br.write(sb.toString());
+			br.close();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
-		
-		ps.close();
 	}
 	
 	public static void main(String[] args) throws Exception {
-		
+		String config_file = "";
+		try{
+			config_file = args[0];
+		}
+		catch (Exception ex) {
+			System.out.println("You need to specify a config file url as first parameter");
+			return;
+		}
 		Stopwatch watch = new Stopwatch();
 		watch.start();		
-		TDBExecutionAndFeature wrapper = new TDBExecutionAndFeature();
-		//wrapper.fusekiTDBRandomlySelectedQueries();
-		
-		//only run once
-		//SparqlDistance sd = new SparqlDistance();
-		//sd.processTrainingQueries();
-		
+		TDBExecutionAndFeature wrapper = new TDBExecutionAndFeature(config_file);
+
 		wrapper.generateAlgebraFeatureDataset();
 		watch.stop();
 		System.out.println("Total time for algebra query extraction: "+watch.elapsed(TimeUnit.MILLISECONDS)+" ms");

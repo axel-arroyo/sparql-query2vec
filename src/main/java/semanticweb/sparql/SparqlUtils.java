@@ -63,17 +63,17 @@ public class SparqlUtils {
 //		System.out.println(map.toString());
     }
 
-    /**
-     * Retrieve array list of csv file, using delimiter  column param
-     * @param url
-     * @param delimiterCol
-     * @param delimiterRow
-     * @return
-     */
-    public static ArrayList<String[]> getArrayFromCsvFile(String url, String delimiterCol, String delimiterRow) {
-		BufferedReader csvReader = null;
+	/**
+	 * Retrieve array list of csv file, using delimiter  column param
+	 * @param url
+	 * @param delimiterCol
+	 * @param delimiterRow
+	 * @return
+	 */
+    public static ArrayList getArrayFromCsvFile(String url, String delimiterCol, String delimiterRow) {
+		BufferedReader csvReader;
 		String row;
-		ArrayList<String[]> arrayList = new ArrayList();
+		ArrayList arrayList = new ArrayList();
 		try {
 			csvReader = new BufferedReader(new FileReader(url));
 			while ((row = csvReader.readLine()) != null) {
@@ -170,7 +170,30 @@ public class SparqlUtils {
         }
         return model;
     }
-	/**
+    /**
+     *
+     * @return
+     */
+    public static Model getNamespacesDBPed(String url){
+
+        Model model = ModelFactory.createDefaultModel();
+        try {
+            BufferedReader csvReader = new BufferedReader(new FileReader(url));
+            String row;
+            while ((row = csvReader.readLine()) != null) {
+                String[] predicates = row.split(" ",2)[1].split(":",2);
+                model.setNsPrefix(predicates[0], predicates[1].replaceAll(" ","").replace("<","").replace(">",""));
+                prefixes = prefixes.concat(row).concat("\n");
+            }
+            csvReader.close();
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+        return model;
+    }
+
+    /**
 	 *
 	 * @return
 	 */
@@ -833,48 +856,48 @@ public class SparqlUtils {
 
 
 	}
-	public static ArrayList<String> getQueries(String trainingQueryFile,ArrayList<Integer> not_include){
-		Model model = getNamespaces();
-		Map<String, String> pref = model.getNsPrefixMap();
-		Object[] keys = pref.keySet().toArray();
-		boolean header = true;
-		ArrayList<String> queries = new ArrayList<String>();
-		int index = 0;
-		try {
-			InputStreamReader csv = new InputStreamReader(new FileInputStream(trainingQueryFile));
-			CSVReader csvReader = new CSVReader (csv);
-			String[] record;
-			while ((record = csvReader.readNext()) != null) {
-				if (header){
-					header = false;
-					continue;
-				}
-				if(not_include.contains(index)){
-					index++;
-					continue;
-				}
-				else
-				{
-					index++;
-				}
-				String query = record[1].replaceAll("^\"|\"$", "");
-				String prefixesStr = "";
-				for (int i = 0; i < model.getNsPrefixMap().size(); i++) {
+    public static ArrayList<String> getQueries(String trainingQueryFile,ArrayList<Integer> not_include){
+        Model model = getNamespaces();
+        Map<String, String> pref = model.getNsPrefixMap();
+        Object[] keys = pref.keySet().toArray();
+        boolean header = true;
+        ArrayList<String> queries = new ArrayList<String>();
+        int index = 0;
+        try {
+            InputStreamReader csv = new InputStreamReader(new FileInputStream(trainingQueryFile));
+            CSVReader csvReader = new CSVReader (csv);
+            String[] record;
+            while ((record = csvReader.readNext()) != null) {
+                if (header){
+                    header = false;
+                    continue;
+                }
+                if(not_include.contains(index)){
+                    index++;
+                    continue;
+                }
+                else
+                {
+                    index++;
+                }
+                String query = record[1].replaceAll("^\"|\"$", "");
+                String prefixesStr = "";
+                for (int i = 0; i < model.getNsPrefixMap().size(); i++) {
 
-					int a = query.indexOf(String.valueOf(keys[i]+":"));
-					if (a != -1 ){
-						prefixesStr = prefixesStr.concat("PREFIX ").concat(String.valueOf(keys[i])).concat(": ").concat("<").concat(pref.get(String.valueOf(keys[i]))).concat("> \n");
-					}
-				}
-				query  = prefixesStr.concat(" " +query);
-				queries.add(query);
-			}
-		}
-		catch (IOException e) {
-			e.printStackTrace();
-		}
-		return  queries;
-	}
+                    int a = query.indexOf(String.valueOf(keys[i]+":"));
+                    if (a != -1 ) {
+                        prefixesStr = prefixesStr.concat("PREFIX ").concat(String.valueOf(keys[i])).concat(": ").concat("<").concat(pref.get(String.valueOf(keys[i]))).concat("> \n");
+                    }
+                }
+                query  = prefixesStr.concat(" " +query);
+                queries.add(query);
+            }
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+        return  queries;
+    }
 
 public static void main(String[] args) throws Exception {
 	String input = "";
