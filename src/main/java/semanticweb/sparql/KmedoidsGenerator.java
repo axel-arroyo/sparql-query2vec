@@ -127,7 +127,7 @@ public class KmedoidsGenerator {
             sb.append("time");
             sb.append(",");
             for (int i = 0; i < k; i++) {
-                sb.append("pcs".concat(String.valueOf(k)));
+                sb.append("pcs").append(k);
                 sb.append(",");
             }
             sb.append("\n");
