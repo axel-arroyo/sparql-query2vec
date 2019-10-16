@@ -4,6 +4,8 @@ import semanticweb.sparql.KmedoidsGenerator;
 import semanticweb.sparql.SparqlUtils;
 import semanticweb.sparql.preprocess.TDBExecutionAndFeature;
 
+import java.util.ArrayList;
+
 public class Endpoint {
 
     public static void main(String[] args) throws Exception {
@@ -27,6 +29,12 @@ public class Endpoint {
             }
             else if (task.equals("algebra-features")){
                 TDBExecutionAndFeature.main(params);
+            }
+            else if (task.equals("predicate-features")){
+                ArrayList<int[]> notused = SparqlUtils.getArrayFeaturesVector(params[0], params[1], params[2], params[3]);
+            }
+            else {
+                System.out.println("The task not found. Pleas use one of them: 'kmedoids, edit-distance, algebra-features, predicate-features'");
             }
         }catch (Exception ex) {
             ex.printStackTrace();

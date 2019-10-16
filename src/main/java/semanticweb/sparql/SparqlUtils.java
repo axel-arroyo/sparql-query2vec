@@ -206,9 +206,9 @@ public class SparqlUtils {
      * @param urlQueries
      * @param urlFeatures
      */
-	public static ArrayList<int[]> getArrayFeaturesVector(String urlQueries, String urlFeatures, String output) {
+	public static ArrayList<int[]> getArrayFeaturesVector(String urlQueries, String urlFeatures, String namespaces, String output) {
 
-        model = getNamespaces();
+        model = getNamespacesDBPed(namespaces);
 
 	    ArrayList<int[]> vectors = new ArrayList<int[]>();
 
@@ -224,7 +224,7 @@ public class SparqlUtils {
 			vectorheader[i] = featuresArray.get(i)[0];
 		}
 
-	    produceCsvArray2(featInQueryList,"featuresByQuery_".concat(output));
+	    produceCsvArray2(featInQueryList,output);
 		for (ArrayList<String> queryArr : featInQueryList) {
 			int[] vector = new int[featuresArray.size()];
 			for (String s : queryArr) {
@@ -232,7 +232,7 @@ public class SparqlUtils {
 					int index = featuresMap.get("<" + s + ">");
 					vector[index]++;
 				} catch (Exception ex) {
-					ex.printStackTrace();
+					//ex.printStackTrace();
 					vector[0]++;
 				}
 
