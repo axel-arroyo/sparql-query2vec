@@ -115,7 +115,7 @@ public class SparqlUtils {
 	 * @param url String
 	 * @return Array of array list of strings
 	 */
-	public static ArrayList<ArrayList<String>> getArrayQueriesFromCsv(String url,boolean header, int queryColumn) {
+	public static ArrayList<ArrayList<String>> getArrayQueriesFromCsv(String url,boolean header, int queryColumn,int idColumn) {
 		String row;
 		ArrayList<ArrayList<String>> arrayList = new ArrayList<ArrayList<String>>();
 		int count = 0;
@@ -127,11 +127,15 @@ public class SparqlUtils {
 			}
 			while ((row = csvReader.readLine()) != null) {
 				countQueryInProcess++;
-				row = row.split(",")[queryColumn];
+				String[] rowArray = row.split(",");
+				row = rowArray[queryColumn];
 				//Remove quotes in init and end of the string...
 				row = row.replaceAll("^\"|\"$", "");
-				ArrayList<String> predicates = retrievePredicatesInTriples(row);
-				arrayList.add(predicates);
+				ArrayList<String> predicatesAndId = new ArrayList<>();
+				if(idColumn >= 0)
+					predicatesAndId.add(rowArray[idColumn]);
+				predicatesAndId.addAll(retrievePredicatesInTriples(row));
+				arrayList.add(predicatesAndId);
 			}
 			csvReader.close();
 		}
@@ -206,34 +210,48 @@ public class SparqlUtils {
      * @param urlQueries
      * @param urlFeatures
      */
-	public static ArrayList<int[]> getArrayFeaturesVector(String urlQueries, String urlFeatures, String namespaces, String output) {
+	public static ArrayList<String[]> getArrayFeaturesVector(String urlQueries, String urlFeatures, String namespaces, String output) {
 
         model = getNamespacesDBPed(namespaces);
 
-	    ArrayList<int[]> vectors = new ArrayList<int[]>();
+	    ArrayList<String[]> vectors = new ArrayList<String[]>();
 
         //Get features list, in [0] uri, in [1] frequency
 	    ArrayList<String[]> featuresArray = getArrayFromCsvFile(urlFeatures);
 		Map<String,Integer> featuresMap = new HashMap<>();
-	    ArrayList<ArrayList<String>> featInQueryList = getArrayQueriesFromCsv(urlQueries,true,1);
-		//we use the size of array intead of -1(csv header) becouse we use extra column called others.
-	    String[] vectorheader = new String[featuresArray.size()];
-		vectorheader[0] = "OTHER";
-	    for (int i = 1; i < featuresArray.size(); i++) {
-			featuresMap.put(featuresArray.get(i)[0],i);
-			vectorheader[i] = featuresArray.get(i)[0];
-		}
+	    ArrayList<ArrayList<String>> featInQueryList = getArrayQueriesFromCsv(urlQueries,true,1,0);
+		//we use the size of array intead of -1(csv header) because we use extra column called others.
+	    String[] vectorheader = new String[featuresArray.size()+2];
+        vectorheader[0] = "id";
+		vectorheader[1] = "OTHER";
+        int i = 2;
+        while (i < featuresArray.size()) {
+            featuresMap.put(featuresArray.get(i)[0],i);
+            vectorheader[i] = featuresArray.get(i)[0];
+            i++;
+        }
 
-	    produceCsvArray2(featInQueryList,output);
+//        produceCsvArray2(featInQueryList,output);
 		for (ArrayList<String> queryArr : featInQueryList) {
-			int[] vector = new int[featuresArray.size()];
+			String[] vector = new String[vectorheader.length];
+			boolean idSeted = false;
 			for (String s : queryArr) {
 				try {
+					if(!idSeted)
+					{
+						idSeted = true;
+						vector[0] = s;
+						continue;
+					}
 					int index = featuresMap.get("<" + s + ">");
-					vector[index]++;
+					if(vector[index] == null)
+						vector[index] = String.valueOf('0');
+					vector[index] = String.valueOf(Integer.parseInt(vector[index]) + 1);
 				} catch (Exception ex) {
 					//ex.printStackTrace();
-					vector[0]++;
+					if(vector[1] == null)
+						vector[1] = String.valueOf('0');
+					vector[1] = String.valueOf(Integer.parseInt(vector[1]) + 1);
 				}
 
 			}
@@ -391,7 +409,7 @@ public class SparqlUtils {
 	 * @param list
 	 * @param filepath
 	 */
-	public static void produceCsvArrayVectors(String[] headers, ArrayList<int[]> list, String filepath) {
+	public static void produceCsvArrayVectors(String[] headers, ArrayList<String[]> list, String filepath) {
 		BufferedWriter br = null;
 		try {
 			br = new BufferedWriter(new FileWriter(filepath));
@@ -404,8 +422,10 @@ public class SparqlUtils {
 			}
 
 			sb.append("\n");
-			for (int[] aList : list) {
-				for (int element : aList) {
+			for (String[] aList : list) {
+				for (String element : aList) {
+					if(element == null)
+						element = String.valueOf(0);
 					sb.append(element);
 					sb.append(",");
 				}

@@ -47,24 +47,8 @@ public class SparqlUtilsTest {
     }
 
     @Test
-    public void testRetrieveTriplesPredicates() {
-//		ArrayList<int[]> arrayVectores = SparqlUtils.getArrayFeaturesVector(
-//				"/home/daniel/Documentos/Web_Semantica/Work/Sparql2vec/6000/x_query.txt",
-//				"/home/daniel/Documentos/ML/rhassan/graph-edit-distance/predicates_most_popular.csv");
-        ArrayList<int[]> arrayVectores = SparqlUtils.getArrayFeaturesVector(
-                "/home/daniel/Documentos/ML/rhassan/query-performance/6000/xval_query.txt",
-                "/home/daniel/Documentos/ML/rhassan/graph-edit-distance/predicates_most_popular.csv",
-                "/home/daniel/Documentos/Web_Semantica/Work/Sparql2vec/prefixes.txt",
-                "val.csv");
-        ArrayList<int[]> arrayVectorestest = SparqlUtils.getArrayFeaturesVector(
-                "/home/daniel/Documentos/ML/rhassan/query-performance/6000/xtest_query.txt",
-                "/home/daniel/Documentos/ML/rhassan/graph-edit-distance/predicates_most_popular.csv",
-                "/home/daniel/Documentos/Web_Semantica/Work/Sparql2vec/prefixes.txt",
-                "test.csv");
-    }
-    @Test
     public void testRetrieveTriplesPredicatesLSQ() {
-        ArrayList<int[]> arrayVectores = SparqlUtils.getArrayFeaturesVector(
+        ArrayList<String[]> arrayVectores = SparqlUtils.getArrayFeaturesVector(
                 "/home/daniel/Documentos/Web_Semantica/Work/Sparql2vec/lsq_extracted1000.csv",
                 "/home/daniel/Documentos/ML/rhassan/graph-edit-distance/predicates_most_popular.csv",
                 "/home/daniel/Documentos/Web_Semantica/Work/Sparql2vec/prefixes.txt",

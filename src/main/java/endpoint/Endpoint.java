@@ -31,7 +31,7 @@ public class Endpoint {
                 TDBExecutionAndFeature.main(params);
             }
             else if (task.equals("predicate-features")){
-                ArrayList<int[]> notused = SparqlUtils.getArrayFeaturesVector(params[0], params[1], params[2], params[3]);
+                ArrayList<String[]> notused = SparqlUtils.getArrayFeaturesVector(params[0], params[1], params[2], params[3]);
             }
             else {
                 System.out.println("The task not found. Pleas use one of them: 'kmedoids, edit-distance, algebra-features, predicate-features'");
