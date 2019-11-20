@@ -1,6 +1,14 @@
+import com.hp.hpl.jena.datatypes.xsd.impl.XSDBaseNumericType;
+import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Triple;
-//import org.junit.Test;
+import com.hp.hpl.jena.query.Query;
+import com.hp.hpl.jena.query.QueryFactory;
+import com.hp.hpl.jena.sparql.algebra.Algebra;
+import com.hp.hpl.jena.sparql.algebra.Op;
+import com.hp.hpl.jena.sparql.core.TriplePath;
+import com.hp.hpl.jena.sparql.syntax.*;
 import org.junit.jupiter.api.Test;
+import semanticweb.sparql.Operator;
 import semanticweb.sparql.QDistanceHungarian;
 import semanticweb.sparql.SparqlUtils;
 
@@ -8,12 +16,10 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Set;
+import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.*;
+//import org.junit.Test;
 
 
 public class SparqlUtilsTest {
@@ -191,4 +197,233 @@ public class SparqlUtilsTest {
         System.out.println(SparqlUtils.getQueryReadyForExecution(s));
     }
 
+    @Test
+    public void testFeatureExtractDeepSet() {
+        //String s = "SELECT * { ?s <http://purl.org/dc/elements/1.1/title> ?o1." +
+        //		"?s <http://purl.org/dc/elements/1.1/description> ?o2. }";
+        ArrayList<String> tablesOrder = new ArrayList<>();
+        ArrayList<String> joinsOrder = new ArrayList<>();
+        ArrayList<String> predicatesOrder = new ArrayList<>();
+        ArrayList<String> predicatesUrisOrder = new ArrayList<>();
+
+        String s = "PREFIX foaf:    <http://xmlns.com/foaf/0.1/> SELECT ?name ?email WHERE {  ?x foaf:knows ?y . ?y foaf:name ?name .  OPTIONAL { ?y foaf:mbox ?email }  }";
+        String s1 = "PREFIX dbo: <http://dbpedia.org/ontology/>\n" +
+                "PREFIX res: <http://dbpedia.org/resource/>\n" +
+                "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n" +
+                "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" +
+                "SELECT DISTINCT ?uri ?other \n" +
+                "WHERE {\n" +
+                "\t?uri rdf:type dbo:Film .\n" +
+                "        ?uri dbo:starring res:Julia_Roberts .\n" +
+                "        ?uri dbo:starring ?other.\n" +
+                "}";
+        String s2 = "PREFIX dbo: <http://dbpedia.org/ontology/>\n" +
+                "PREFIX res:  <http://dbpedia.org/resource/>\n" +
+                "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n" +
+                "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" +
+                "SELECT DISTINCT ?uri ?string \n" +
+                "WHERE {\n" +
+                "\t?uri rdf:type dbo:Book .\n" +
+                "        ?uri dbo:author res:Danielle_Steel .\n" +
+                "\tOPTIONAL { ?uri rdfs:label ?string . FILTER (lang(?string) = 'en') }\n" +
+                "}";
+        String s3 = "PREFIX dbo: <http://dbpedia.org/ontology/>\n" +
+                "PREFIX res:  <http://dbpedia.org/resource/>\n" +
+                "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n" +
+                "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" +
+                "SELECT DISTINCT ?uri ?string \n" +
+                "WHERE {\n" +
+                "\t?uri rdf:type dbo:Book .\n" +
+                "        ?uri dbo:author res:Danielle_Steel .\n" +
+                "        ?uri  <http://dbpedia.org/ontology/numberOfPages>  336 . \n" +
+                "\tOPTIONAL { ?uri rdfs:label ?string . FILTER (lang(?string) = 'en') }\n" +
+                "}";
+        String[] queries;
+        queries = new String[4];
+        queries[0] = s;
+        queries[1] = s1;
+        queries[2] = s2;
+        queries[3] = s3;
+        for (int i = 0; i < queries.length; i++) {
+            Query query = QueryFactory.create(queries[i]);
+            System.out.println(query);
+
+            // Generate algebra
+            Op op = Algebra.compile(query);
+            op = Algebra.optimize(op);
+            System.out.println("AL: " + op);
+
+            Element e = query.getQueryPattern();
+
+            System.out.println("pattern:" + e);
+
+            System.out.println("walk");
+            ArrayList<String> queryTables = new ArrayList<>();
+            ArrayList<String> queryVariables = new ArrayList<>();
+            ArrayList<String> queryJoins = new ArrayList<>();
+            ArrayList<HashMap<String, Object>> queryPredicates = new ArrayList<>();
+            ArrayList<HashMap<String, Object>> queryPredicatesUris = new ArrayList<>();
+            /**
+             * Procedimiento:
+             * Por cada triple de la forma ?a pred1 ?b:
+             *  registro una tabla(tableId del pred1).
+             *  Check if ?a exist in Object list
+             */
+            HashMap<String, ElementPathBlock> tpf = new HashMap<>();
+//        AlgebraFeatureExtractor.getFeaturesDeepSet(op);
+//        // This will walk through all parts of the query
+            ElementWalker.walk(e,
+                    // For each element...
+                    new ElementVisitorBase() {
+                        public void visit(ElementOptional el) {
+                            List<Element> elements = ((ElementGroup) el.getOptionalElement()).getElements();
+                            for (Element element : elements) {
+                                String key = element.toString();
+                                tpf.remove(key);
+                            }
+                        }
+
+                        // ...when it's a block of triples...
+                        public void visit(ElementPathBlock el) {
+                            // ...go through all the triples...
+                            tpf.put(el.toString(), el);
+                        }
+
+                        public void visit(ElementTriplesBlock el) {
+                            // ...go through all the triples...
+                            Iterator<Triple> triples = el.patternElts();
+                            while (triples.hasNext()) {
+                                // ...and grab the subject
+                                //subjects.add(triples.next().getSubject());
+                                Triple t = triples.next();
+                                System.out.println(t.toString());
+                            }
+                        }
+                    }
+            );
+            ElementPathBlock[] elements = (ElementPathBlock[]) tpf.values().toArray();
+
+            // Loop over elements without optional triples.
+            for (ElementPathBlock el : elements) {
+                Iterator<TriplePath> triples = el.patternElts();
+
+                while (triples.hasNext()) {
+                    // ...and grab the subject
+                    TriplePath t = triples.next();
+                    Node subject = t.getSubject();
+                    Node object = t.getObject();
+                    Node predicate = t.getPredicate();
+
+                    if (subject.isVariable() && predicate.isURI() && object.isVariable()) {//if not int table list add to.
+                        ArrayList[] res = this.processVarPredVar(queryTables,queryVariables,queryJoins,subject,predicate,object);
+                        queryTables = res[0];
+                        queryVariables = res[1];
+                        queryJoins = res[2];
+//                        if (!queryTables.contains(predicate.getURI())) {
+//                            queryTables.add(predicate.getURI());
+//                        }
+//                        //add variables subject to list
+//                        if (!queryVariables.contains(subject.getName())) {
+//                            queryVariables.add(subject.getName());
+//                        }
+//                        //add variables object to list
+//                        if (!queryVariables.contains(object.getName())) {
+//                            queryVariables.add(object.getName());
+//                        }
+//                        //add joins  var1_predicateURI_var2
+//                        queryJoins.add(
+//                                ""
+//                                        .concat("v")
+//                                        .concat(
+//                                                String.valueOf(queryVariables.indexOf(subject.getName()))
+//                                        )
+//                                        .concat("_")
+//                                        .concat(predicate.getURI())
+//                                        .concat("_")
+//                                        .concat("v")
+//                                        .concat(
+//                                                String.valueOf(queryVariables.indexOf(object.getName()))
+//                                        )
+//                        );
+                    }
+                    /**
+                     * Logic for subject var, predicate uri, object int literal like (Var1.foaf:age, 29 )
+                     */
+                    else if (subject.isVariable()
+                            && predicate.isURI()
+                            && object.getLiteralDatatype().getClass() == XSDBaseNumericType.class) {//if not int table list add to.
+//                                else if (subject.isVariable() && predicate.isURI() && object.isLiteral()) {//if not int table list add to.
+                        if (!queryTables.contains(predicate.getURI())) {
+                            queryTables.add(predicate.getURI());
+                        }
+                        //add variables subject to list
+                        if (!queryVariables.contains(subject.getName())) {
+                            queryVariables.add(subject.getName());
+                        }
+                        //add Literal object to list
+                        HashMap<String, Object> pred = new HashMap<>();
+                        pred.put("col", predicate.getURI());
+                        pred.put("operator", Operator.EQUAL);
+                        pred.put("value", object.getLiteralValue());
+                        queryPredicates.add(pred);
+                    }
+                    /**
+                     * Logic for subject var, predicate uri, object uri like (Var1.rdf:type, foaf:Person)
+                     */
+                    else if (subject.isVariable() && predicate.isURI() && object.isURI()) {//if not int table list add to.
+                        if (!queryTables.contains(predicate.getURI())) {
+                            queryTables.add(predicate.getURI());
+                        }
+                        //add variables subject to list
+                        if (!queryVariables.contains(subject.getName())) {
+                            queryVariables.add(subject.getName());
+                        }
+                        HashMap<String, Object> pred = new HashMap<>();
+                        pred.put("col", predicate.getURI());
+                        pred.put("object", object.getURI());
+                        queryPredicatesUris.add(pred);
+                    }
+                    // Todo Incorporate other cases...
+                }
+            }
+            // Todo Codificate query and add to list.
+            String a = "";
+        }
+    }
+
+    private ArrayList[] processVarPredVar(
+            ArrayList<String> queryTables,
+            ArrayList<String> queryVariables,
+            ArrayList<String> queryJoins,
+            Node subject,
+            Node predicate,
+            Node object) {
+        if (!queryTables.contains(predicate.getURI())) {
+            queryTables.add(predicate.getURI());
+        }
+        //add variables subject to list
+        if (!queryVariables.contains(subject.getName())) {
+            queryVariables.add(subject.getName());
+        }
+        //add variables object to list
+        if (!queryVariables.contains(object.getName())) {
+            queryVariables.add(object.getName());
+        }
+        //add joins  var1_predicateURI_var2
+        queryJoins.add(
+                ""
+                        .concat("v")
+                        .concat(
+                                String.valueOf(queryVariables.indexOf(subject.getName()))
+                        )
+                        .concat("_")
+                        .concat(predicate.getURI())
+                        .concat("_")
+                        .concat("v")
+                        .concat(
+                                String.valueOf(queryVariables.indexOf(object.getName()))
+                        )
+        );
+        return new ArrayList[]{queryTables, queryVariables, queryJoins};
+    }
 }
