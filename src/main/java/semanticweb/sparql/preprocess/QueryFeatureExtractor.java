@@ -30,9 +30,22 @@ public class QueryFeatureExtractor {
     private ArrayList<HashMap<String, Object>> queryPredicates;
     private ArrayList<HashMap<String, Object>> queryPredicatesUris;
     private String query;
+    private String id;
+    private String cardinality;
 
     public QueryFeatureExtractor(String query) {
         this.query = query;
+        this.queryTables = new ArrayList<>();
+        this.queryVariables = new ArrayList<>();
+        this.queryJoins = new ArrayList<>();
+        this.queryPredicates = new ArrayList<>();
+        this.queryPredicatesUris = new ArrayList<>();
+    }
+
+    public QueryFeatureExtractor(ArrayList<String> queryArr) {
+        this.query = queryArr.get(1);
+        this.id = queryArr.get(0);
+        this.cardinality = queryArr.get(2);
         this.queryTables = new ArrayList<>();
         this.queryVariables = new ArrayList<>();
         this.queryJoins = new ArrayList<>();
@@ -109,11 +122,12 @@ public class QueryFeatureExtractor {
         }
         HashMap<String, Object> pred = new HashMap<>();
         pred.put("col", predicate.getURI());
+        pred.put("operator", Operator.EQUAL);
         pred.put("object", object.getURI());
         this.queryPredicatesUris.add(pred);
     }
 
-    public Map<String, ArrayList> getProcessedData() {
+    public Map<String, Object> getProcessedData() {
         Query query = QueryFactory.create(this.query);
         System.out.println(query);
 
@@ -164,17 +178,26 @@ public class QueryFeatureExtractor {
             else if (subject.isVariable() && predicate.isURI() && object.isURI()) {//if not int table list add to.
                 this.processVarPredUri(subject, predicate, object);
             }
-            else if (subject.isVariable() && predicate.isURI() && object.isLiteral() && object.getLiteralDatatype().getClass() == XSDBaseNumericType.class) {
+            else if (
+                    subject.isVariable() && predicate.isURI() &&
+                    object.isLiteral() && object.getLiteralDatatype() != null &&
+                    object.getLiteralDatatype().getClass() == XSDBaseNumericType.class) {
                 this.processVarPredNumeric(subject, predicate, object);
             }
             // Todo Incorporate other cases...
         }
-        Map<String, ArrayList> result = new HashMap<>();
+        Map<String, Object> result = new HashMap<>();
         result.put("queryTables", this.queryTables);
         result.put("queryVariables", this.queryVariables);
         result.put("queryJoins", this.queryJoins);
         result.put("queryPredicates", this.queryPredicates);
         result.put("queryPredicatesUris", this.queryPredicatesUris);
+        if (this.id != null) {
+            result.put("id", this.id);
+        }
+        if (this.cardinality != null) {
+            result.put("cardinality", this.cardinality);
+        }
         return result;
     }
 
@@ -219,7 +242,7 @@ public class QueryFeatureExtractor {
         queries[3] = s3;
         for (String query : queries) {
             QueryFeatureExtractor qfe = new QueryFeatureExtractor(query);
-            Map<String, ArrayList> data = qfe.getProcessedData();
+            Map<String, Object> data = qfe.getProcessedData();
             System.out.println(data);
         }
     }
