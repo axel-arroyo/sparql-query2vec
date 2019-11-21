@@ -17,4 +17,6 @@ jobs:
       run: |
         mvn clean package
         mvn deploy
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
 
