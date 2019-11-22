@@ -36,8 +36,14 @@ public class Endpoint {
             else if (task.equals("predicate-features")){
                 ArrayList<String[]> notused = SparqlUtils.getArrayFeaturesVector(params[0], params[1], params[2], params[3]);
             }
-            else if (task.equals("deepset-features")){
-                ArrayList<Map<String, Object>> notused = DeepSetFeatureExtractor.getArrayFeaturesVector(params[0], params[1], params[2], params[3]);
+            else if (task.equals("deepset-features")) {
+                if(params.length == 5){
+                    //Case for parallel process...
+                    DeepSetFeatureExtractor.getArrayFeaturesVectorParallel(params[0], params[1], params[2], params[3], Integer.parseInt(params[4]));
+                }
+                else {
+                    DeepSetFeatureExtractor.getArrayFeaturesVector(params[0], params[1], params[2], params[3]);
+                }
             }
             else {
                 System.out.println("The task not found. Pleas use one of them: 'kmedoids, edit-distance, algebra-features, predicate-features'");
@@ -46,6 +52,5 @@ public class Endpoint {
             ex.printStackTrace();
             System.out.println("You need to specify a task as first parameter");
         }
-
     }
 }

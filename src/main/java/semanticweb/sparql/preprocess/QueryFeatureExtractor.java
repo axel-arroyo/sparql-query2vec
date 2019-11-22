@@ -9,14 +9,7 @@ import com.hp.hpl.jena.sparql.algebra.Op;
 import com.hp.hpl.jena.sparql.core.TriplePath;
 import com.hp.hpl.jena.sparql.syntax.*;
 import semanticweb.sparql.Operator;
-
 import java.util.*;
-/*
-              Procedimiento:
-              Por cada triple de la forma ?a pred1 ?b:
-               registro una tabla(tableId del pred1).
-               Check if ?a exist in Object list
-             */
 
 /**
  * Process a SPARQL query string and extract sets of tables, joins,predicates, and uriPredicates
@@ -106,6 +99,29 @@ public class QueryFeatureExtractor {
     }
 
     /**
+     * Logic for subject literal, predicate uri, object var literal like (29  foaf:age, var )
+     *
+     * @param subject   Subject of the triple pattern frame
+     * @param predicate Predicate  of the triple pattern frame
+     * @param object    Object  of the triple pattern frame
+     */
+    private void processNumericPredVar(Node subject, Node predicate, Node object) {
+        if (!queryTables.contains(predicate.getURI())) {
+            queryTables.add(predicate.getURI());
+        }
+        //add variables subject to list
+        if (!queryVariables.contains(object.getName())) {
+            queryVariables.add(object.getName());
+        }
+        //add Literal object to list
+        HashMap<String, Object> pred = new HashMap<>();
+        pred.put("col", predicate.getURI());
+        pred.put("operator", Operator.EQUAL);
+        pred.put("value", subject.getLiteralValue());
+        queryPredicates.add(pred);
+    }
+
+    /**
      * Logic for subject var, predicate uri, object int literal like (Var1.rdf:type, foaf:Person )
      *
      * @param subject   Subject of the triple pattern frame
@@ -127,6 +143,28 @@ public class QueryFeatureExtractor {
         this.queryPredicatesUris.add(pred);
     }
 
+    /**
+     * Logic for subject uri, predicate uri, object int var like (:Boat :builtBy ?var1 )
+     *
+     * @param subject   Subject of the triple pattern frame
+     * @param predicate Predicate  of the triple pattern frame
+     * @param object    Object  of the triple pattern frame
+     */
+    private void processUriPredVar(Node subject, Node predicate, Node object) {
+        if (!this.queryTables.contains(predicate.getURI())) {
+            this.queryTables.add(predicate.getURI());
+        }
+        //add variables object to list
+        if (!this.queryVariables.contains(object.getName())) {
+            this.queryVariables.add(object.getName());
+        }
+        HashMap<String, Object> pred = new HashMap<>();
+        pred.put("col", predicate.getURI());
+        pred.put("operator", Operator.EQUAL);
+        pred.put("object", subject.getURI());
+        this.queryPredicatesUris.add(pred);
+    }
+
     public Map<String, Object> getProcessedData() {
         Query query = QueryFactory.create(this.query);
         System.out.println(query);
@@ -141,28 +179,28 @@ public class QueryFeatureExtractor {
         // AlgebraFeatureExtractor.getFeaturesDeepSet(op);
         // This will walk through all parts of the query
         ElementWalker.walk(e,
-            // For each element...
-            new ElementVisitorBase() {
-                // Delete tpf of Optional of queries from list to tpfs to vectorize.
-                public void visit(ElementOptional el) {
-                    List<Element> elements = ((ElementGroup) el.getOptionalElement()).getElements();
-                    for (Element element : elements) {
-                        String key = element.toString();
-                        tpf.remove(key);
+                // For each element...
+                new ElementVisitorBase() {
+                    // Delete tpf of Optional of queries from list to tpfs to vectorize.
+                    public void visit(ElementOptional el) {
+                        List<Element> elements = ((ElementGroup) el.getOptionalElement()).getElements();
+                        for (Element element : elements) {
+                            String key = element.toString();
+                            tpf.remove(key);
+                        }
                     }
-                }
 
-                // ...when it's a block of triples...
-                public void visit(ElementPathBlock el) {
-                    // ...go through all the triples...
-                    Iterator<TriplePath> triples = el.patternElts();
-                    while (triples.hasNext()) {
-                        TriplePath t = triples.next();
-                        String tripleHash= t.getPath() != null ? t.getSubject() + " " + t.getPath() + " " + t.getObject() : t.getSubject() + " " + t.getPredicate() + " " + t.getObject();
-                        tpf.put(tripleHash, t);
+                    // ...when it's a block of triples...
+                    public void visit(ElementPathBlock el) {
+                        // ...go through all the triples...
+                        Iterator<TriplePath> triples = el.patternElts();
+                        while (triples.hasNext()) {
+                            TriplePath t = triples.next();
+                            String tripleHash = t.getPath() != null ? t.getSubject() + " " + t.getPath() + " " + t.getObject() : t.getSubject() + " " + t.getPredicate() + " " + t.getObject();
+                            tpf.put(tripleHash, t);
+                        }
                     }
                 }
-            }
         );
         for (TriplePath t : tpf.values()) {
             // Loop over elements without optional triples.
@@ -174,15 +212,22 @@ public class QueryFeatureExtractor {
             if (subject.isVariable() && predicate.isURI() && object.isVariable()) {
                 //if not int table list add to.
                 this.processVarPredVar(subject, predicate, object);
-            }
-            else if (subject.isVariable() && predicate.isURI() && object.isURI()) {//if not int table list add to.
+            } else if (subject.isVariable() && predicate.isURI() && object.isURI()) {
                 this.processVarPredUri(subject, predicate, object);
-            }
-            else if (
+            } else if (
                     subject.isVariable() && predicate.isURI() &&
-                    object.isLiteral() && object.getLiteralDatatype() != null &&
-                    object.getLiteralDatatype().getClass() == XSDBaseNumericType.class) {
+                            object.isLiteral() && object.getLiteralDatatype() != null &&
+                            object.getLiteralDatatype().getClass() == XSDBaseNumericType.class) {
                 this.processVarPredNumeric(subject, predicate, object);
+            }
+            //Less probables
+            else if (subject.isURI() && predicate.isURI() && object.isVariable()) {
+                this.processUriPredVar(subject, predicate, object);
+            } else if (
+                    object.isVariable() && predicate.isURI() &&
+                            subject.isLiteral() && subject.getLiteralDatatype() != null &&
+                            subject.getLiteralDatatype().getClass() == XSDBaseNumericType.class) {
+                this.processNumericPredVar(subject, predicate, object);
             }
             // Todo Incorporate other cases...
         }
