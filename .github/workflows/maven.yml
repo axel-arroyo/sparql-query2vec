@@ -20,3 +20,7 @@ jobs:
 #        mvn deploy
 
 
+    - uses: actions/upload-artifact@v1
+      with:
+        name: my-artifact
+        path: target/graph-edit-distance-1.0-SNAPSHOT.jar
