@@ -1,4 +1,8 @@
-Wrapper for using graph algorithms in Graph Matching Toolkit http://www.fhnw.ch/wirtschaft/iwi/gmt for RDF graphs
+Approaches to vectorize Sparql queries and their metadata for Machine Learning tasks.
+### Some baselines
+- Rhassan code for algebra queries representation.
+- Rhassan code for graph pattern queries representation based in kmedoids.
+- **Queries representations using sets of features for DeepSet architecture**(working on..)
 
 ### Run
 For run use that
