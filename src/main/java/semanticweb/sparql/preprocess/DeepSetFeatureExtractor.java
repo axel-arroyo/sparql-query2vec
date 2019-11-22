@@ -37,9 +37,10 @@ public class DeepSetFeatureExtractor {
      * @param header      If csv include header
      * @param queryColumn Csv column that contain query string( Csv must contain other data)
      * @param idColumn    Csv column that contain the query id
+     * @param length    Length of the queries with cardinality > zero
      * @return
      */
-    public static ArrayList<ArrayList<String>> getArrayQueriesMetaFromCsv(String url, boolean header, int queryColumn, int idColumn, int cardinalityColumns) {
+    public static ArrayList<ArrayList<String>> getArrayQueriesMetaFromCsv(String url, boolean header, int queryColumn, int idColumn, int cardinalityColumns, int length) {
         String row;
         ArrayList<ArrayList<String>> arrayList = new ArrayList<ArrayList<String>>();
         int countQueryInProcess = 0;
@@ -49,8 +50,8 @@ public class DeepSetFeatureExtractor {
                 //Ignore first read that corresponde with header
                 csvReader.readLine();
             }
-            while ((row = csvReader.readLine()) != null && countQueryInProcess < 200) {
-                countQueryInProcess++;
+            // if length is equal to zero not restrict the length of queries.
+            while ((row = csvReader.readLine()) != null && (countQueryInProcess < length || length == 0)) {
                 String[] rowArray = row.split(",");
                 row = rowArray[queryColumn];
                 //Remove quotes in init and end of the string...
@@ -60,6 +61,20 @@ public class DeepSetFeatureExtractor {
                     predicatesAndId.add(rowArray[idColumn]);
                 predicatesAndId.add(row);
                 predicatesAndId.add(rowArray[cardinalityColumns]);
+                try {
+                    if (Integer.parseInt(rowArray[cardinalityColumns]) > 0) {
+                        countQueryInProcess++;
+                    }
+                    else {
+                        // If cardinality not > 0 not add the query to list.
+                        continue;
+                    }
+                }
+                catch (Exception ex){
+                    ex.printStackTrace();
+                    continue;
+                }
+
                 arrayList.add(predicatesAndId);
             }
             csvReader.close();
@@ -77,7 +92,7 @@ public class DeepSetFeatureExtractor {
      * @param output
      * @return
      */
-    public static ArrayList<Map<String, Object>> getArrayFeaturesVector(String urlQueries, String output, String sets, String namespaces) {
+    public static ArrayList<Map<String, Object>> getArrayFeaturesVector(String urlQueries, String output, String sets, String namespaces, int length) {
 
         model = SparqlUtils.getNamespacesDBPed(namespaces);
 
@@ -94,7 +109,7 @@ public class DeepSetFeatureExtractor {
             }
         }
 
-        ArrayList<ArrayList<String>> featInQueryList = getArrayQueriesMetaFromCsv(urlQueries, true, 1, 0, 8);
+        ArrayList<ArrayList<String>> featInQueryList = getArrayQueriesMetaFromCsv(urlQueries, true, 1, 0, 8,length);
         //we use the size of array intead of -1(csv header) because we use extra column called others.
         boolean initializeHeaders = true;
         for (ArrayList<String> queryArr : featInQueryList) {
@@ -121,14 +136,13 @@ public class DeepSetFeatureExtractor {
      * @param urlQueries
      * @param output
      * @param namespaces
+     * @param length Length of queries to get from the csv queries file.
+     * @param cores The count of cores to use in parallel process
      * @return
      */
-    public static ArrayList<Map<String, Object>> getArrayFeaturesVectorParallel(String urlQueries, String output, String sets, String namespaces, int cores) {
+    public static ArrayList<Map<String, Object>> getArrayFeaturesVectorParallel(String urlQueries, String output, String sets, String namespaces, int length, int cores) {
 
         model = SparqlUtils.getNamespacesDBPed(namespaces);
-
-//        ArrayList<Map<String,Object>> vectors = new ArrayList<>();
-
         ArrayList<String> featuresArray = new ArrayList<>();
         String[] arraySets = sets.split(",");
         // Add trusted features set to list.
@@ -139,7 +153,7 @@ public class DeepSetFeatureExtractor {
                 }
             }
         }
-        ArrayList<ArrayList<String>> featInQueryList = getArrayQueriesMetaFromCsv(urlQueries, true, 1, 0, 8);
+        ArrayList<ArrayList<String>> featInQueryList = getArrayQueriesMetaFromCsv(urlQueries, true, 1, 0, 8, length);
         ForkJoinPool pool = new ForkJoinPool();
 
         RecursiveDeepSetFeaturizeAction task = new RecursiveDeepSetFeaturizeAction(featInQueryList, featuresArray, cores, output, 0, featInQueryList.size());

@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>utfsm</groupId>
-    <artifactId>graph-edit-distance</artifactId>
+    <artifactId>sparql-query2vec</artifactId>
     <version>0.0.1</version>
     <build>
         <plugins>
@@ -33,9 +33,6 @@
                 <artifactId>maven-assembly-plugin</artifactId>
                 <version>2.6</version>
                 <configuration>
-<!--                    <finalName>-->
-<!--                        graph-edit-distance-->
-<!--                    </finalName>-->
                     <appendAssemblyId>
                         false
                     </appendAssemblyId>
@@ -75,7 +72,6 @@
             <version>2.11.0</version>
             <type>pom</type>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/org.hamcrest/hamcrest-library -->
         <!-- https://mvnrepository.com/artifact/org.hamcrest/hamcrest-library -->
         <dependency>
             <groupId>org.hamcrest</groupId>

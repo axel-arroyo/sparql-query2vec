@@ -38,11 +38,16 @@ public class Endpoint {
             }
             else if (task.equals("deepset-features")) {
                 if(params.length == 5){
-                    //Case for parallel process...
-                    DeepSetFeatureExtractor.getArrayFeaturesVectorParallel(params[0], params[1], params[2], params[3], Integer.parseInt(params[4]));
+                    // Case with a restrictive length of queries tu process
+                    DeepSetFeatureExtractor.getArrayFeaturesVector(params[0], params[1], params[2], params[3], Integer.parseInt(params[4]));
                 }
+                else if(params.length == 6){
+                    // Case for parallel process...
+                    DeepSetFeatureExtractor.getArrayFeaturesVectorParallel(params[0], params[1], params[2], params[3], Integer.parseInt(params[4]), Integer.parseInt(params[5]));
+                }
+
                 else {
-                    DeepSetFeatureExtractor.getArrayFeaturesVector(params[0], params[1], params[2], params[3]);
+                    DeepSetFeatureExtractor.getArrayFeaturesVector(params[0], params[1], params[2], params[3], 0);
                 }
             }
             else {
