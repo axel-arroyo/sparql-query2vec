@@ -11,14 +11,15 @@ public class RecursiveDeepSetFeaturizeAction extends RecursiveTask<ArrayList<Map
 
     private ArrayList<ArrayList<String>> queries;
     private int indexStart, indexLast, cores;
-    private String output;
+    private String output,output_delimiter;
     private ArrayList<String> headerArray;
 
-    public RecursiveDeepSetFeaturizeAction(ArrayList<ArrayList<String>> queries, ArrayList<String> headerArray, int cores, String output, int indexStart, int indexLast) {
+    public RecursiveDeepSetFeaturizeAction(ArrayList<ArrayList<String>> queries, ArrayList<String> headerArray, int cores, String output,String output_delimiter, int indexStart, int indexLast) {
         this.queries = queries;
         this.headerArray = headerArray;
         this.cores = cores;
         this.output = output;
+        this.output_delimiter = output_delimiter;
         this.indexStart = indexStart;
         this.indexLast = indexLast;
     }
@@ -41,7 +42,7 @@ public class RecursiveDeepSetFeaturizeAction extends RecursiveTask<ArrayList<Map
         vectorHeader.add("id");
         vectorHeader.addAll(headerArray);
         vectorHeader.add("cardinality");
-        DeepSetFeatureExtractor.produceCsvArrayVectors(vectorHeader, vectors, output, indexStart, indexLast);
+        DeepSetFeatureExtractor.produceCsvArrayVectors(vectorHeader, vectors, output, indexStart, indexLast, output_delimiter);
         return vectors;
     }
 
@@ -50,8 +51,8 @@ public class RecursiveDeepSetFeaturizeAction extends RecursiveTask<ArrayList<Map
         if (indexLast - indexStart < 50) {
             return computeFeaturesCreation(indexStart, indexLast);
         } else {
-            RecursiveDeepSetFeaturizeAction left = new RecursiveDeepSetFeaturizeAction(queries,headerArray, cores, output, indexStart, (indexLast + indexStart) / 2);
-            RecursiveDeepSetFeaturizeAction right = new RecursiveDeepSetFeaturizeAction(queries,headerArray, cores, output, (indexLast + indexStart) / 2, indexLast);
+            RecursiveDeepSetFeaturizeAction left = new RecursiveDeepSetFeaturizeAction(queries,headerArray, cores, output,output_delimiter, indexStart, (indexLast + indexStart) / 2);
+            RecursiveDeepSetFeaturizeAction right = new RecursiveDeepSetFeaturizeAction(queries,headerArray, cores, output,output_delimiter, (indexLast + indexStart) / 2, indexLast);
             left.fork();
             ArrayList<Map<String, Object>> rightAns = right.compute();
             ArrayList<Map<String, Object>> leftAns = left.join();

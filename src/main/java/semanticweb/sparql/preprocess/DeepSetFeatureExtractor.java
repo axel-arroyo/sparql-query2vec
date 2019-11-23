@@ -31,9 +31,9 @@ public class DeepSetFeatureExtractor {
     }
 
     /**
-     * Retrieve list of vectors data set from queries in csv file.
+     * Retrieve list of queries tuples  in csv dataset file.
      *
-     * @param url
+     * @param url   Url fil csv with queries info.
      * @param header      If csv include header
      * @param queryColumn Csv column that contain query string( Csv must contain other data)
      * @param idColumn    Csv column that contain the query id
@@ -87,12 +87,14 @@ public class DeepSetFeatureExtractor {
     /**
      * Retrieve vectors for DeepSet architecture.
      *
-     * @param urlQueries
-     * @param namespaces
-     * @param output
-     * @return
+     * @param urlQueries Url for queries file.
+     * @param output Url for output file.
+     * @param namespaces Url for Sparql prefixes file.
+     * @param length Length of queries to get from the csv queries file.
+     * @param output_delimiter Delimiter for csv file column.
+     * @return ArrayList with Map of queries data generated, see @{@link QueryFeatureExtractor}
      */
-    public static ArrayList<Map<String, Object>> getArrayFeaturesVector(String urlQueries, String output, String sets, String namespaces, int length) {
+    public static ArrayList<Map<String, Object>> getArrayFeaturesVector(String urlQueries, String output, String sets, String namespaces, int length,String output_delimiter) {
 
         model = SparqlUtils.getNamespacesDBPed(namespaces);
 
@@ -126,21 +128,23 @@ public class DeepSetFeatureExtractor {
         vectorHeader.add("id");
         vectorHeader.addAll(featuresArray);
         vectorHeader.add("cardinality");
-        produceCsvArrayVectors(vectorHeader, vectors, output);
+        produceCsvArrayVectors(vectorHeader, vectors, output, output_delimiter);
         return vectors;
     }
 
+
     /**
-     * Retrieve vectors for DeepSet architecture.
+     * Retrieve vectors for DeepSet architecture processing in parallel
      *
-     * @param urlQueries
-     * @param output
-     * @param namespaces
+     * @param urlQueries Url for queries file.
+     * @param output Url for output file.
+     * @param namespaces Url for Sparql prefixes file.
      * @param length Length of queries to get from the csv queries file.
-     * @param cores The count of cores to use in parallel process
-     * @return
+     * @param cores The count of cores to use in parallel process.
+     * @param output_delimiter Delimiter for csv file column.
+     * @return ArrayList with Map of queries data generated, see @{@link QueryFeatureExtractor}
      */
-    public static ArrayList<Map<String, Object>> getArrayFeaturesVectorParallel(String urlQueries, String output, String sets, String namespaces, int length, int cores) {
+    public static ArrayList<Map<String, Object>> getArrayFeaturesVectorParallel(String urlQueries, String output, String sets, String namespaces, int length, int cores, String output_delimiter) {
 
         model = SparqlUtils.getNamespacesDBPed(namespaces);
         ArrayList<String> featuresArray = new ArrayList<>();
@@ -156,28 +160,37 @@ public class DeepSetFeatureExtractor {
         ArrayList<ArrayList<String>> featInQueryList = getArrayQueriesMetaFromCsv(urlQueries, true, 1, 0, 8, length);
         ForkJoinPool pool = new ForkJoinPool();
 
-        RecursiveDeepSetFeaturizeAction task = new RecursiveDeepSetFeaturizeAction(featInQueryList, featuresArray, cores, output, 0, featInQueryList.size());
+        RecursiveDeepSetFeaturizeAction task = new RecursiveDeepSetFeaturizeAction(featInQueryList, featuresArray, cores, output,output_delimiter, 0, featInQueryList.size());
         return pool.invoke(task);
     }
 
     /**
      * Create a csv with array data passed as parameters.
-     *
-     * @param list
-     * @param filepath
+     * @param headers {@link ArrayList} With header for output file to generate
+     * @param list  Queries data list.
+     * @param filepath Output file path.
+     * @param indexStart Index start tuple for build the output filename with de format filename_indexStart_indexLast.csv
+     * @param indexLast Index last tuple for build the output filename with de format filename_indexStart_indexLast.csv
+     * @param output_delimiter Delimiter for csv data columns.
      */
-    public static void produceCsvArrayVectors(ArrayList<String> headers, ArrayList<Map<String, Object>> list, String filepath, int indexStart, int indexLast) {
+    public static void produceCsvArrayVectors(ArrayList<String> headers, ArrayList<Map<String, Object>> list, String filepath, int indexStart, int indexLast, String output_delimiter) {
         String extension = filepath.substring(filepath.length()-4);
-        produceCsvArrayVectors( headers, list, filepath.substring(0,filepath.length()-4).concat(String.valueOf(indexStart)).concat("_").concat(String.valueOf(indexLast)).concat(extension));
+        produceCsvArrayVectors(
+                headers,
+                list,
+                filepath.substring(0,filepath.length()-4).concat(String.valueOf(indexStart)).concat("_").concat(String.valueOf(indexLast)).concat(extension),
+                output_delimiter
+        );
     }
 
     /**
      * Create a csv with array data passed as parameters.
-     *
-     * @param list
-     * @param filepath
+     * @param headers {@link ArrayList} With header for output file to generate
+     * @param list  Queries data list.
+     * @param filepath Output file path.
+     * @param output_delimiter Delimiter for csv data columns.
      */
-    public static void produceCsvArrayVectors(ArrayList<String> headers, ArrayList<Map<String, Object>> list, String filepath) {
+    public static void produceCsvArrayVectors(ArrayList<String> headers, ArrayList<Map<String, Object>> list, String filepath, String output_delimiter) {
         BufferedWriter br;
         try {
             br = new BufferedWriter(new FileWriter(filepath));
@@ -186,7 +199,7 @@ public class DeepSetFeatureExtractor {
             // Append strings from array
             for (String element : headers) {
                 sb.append(element);
-                sb.append(";");
+                sb.append(output_delimiter);
             }
 
             sb.append("\n");
@@ -253,7 +266,7 @@ public class DeepSetFeatureExtractor {
                         }
                     }
                     // Add separator
-                    sb.append(";");
+                    sb.append(output_delimiter);
                 }
                 sb.append("\n");
             }

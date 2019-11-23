@@ -26,6 +26,10 @@ public class QueryFeatureExtractor {
     private String id;
     private String cardinality;
 
+    /**
+     * Constructor for query String
+     * @param query
+     */
     public QueryFeatureExtractor(String query) {
         this.query = query;
         this.queryTables = new ArrayList<>();
@@ -35,9 +39,13 @@ public class QueryFeatureExtractor {
         this.queryPredicatesUris = new ArrayList<>();
     }
 
+    /**
+     * Constructor for query data in a List
+     * @param queryArr {@link ArrayList} [id, query, cardinality]
+     */
     public QueryFeatureExtractor(ArrayList<String> queryArr) {
-        this.query = queryArr.get(1);
         this.id = queryArr.get(0);
+        this.query = queryArr.get(1);
         this.cardinality = queryArr.get(2);
         this.queryTables = new ArrayList<>();
         this.queryVariables = new ArrayList<>();
@@ -165,14 +173,21 @@ public class QueryFeatureExtractor {
         this.queryPredicatesUris.add(pred);
     }
 
+    /**
+     * Retrieve Map of query processed. Each Map contains:
+     *  "queryTables"
+     *  "queryVariables"
+     *  "queryJoins"
+     *  "queryPredicates"
+     *  "queryPredicatesUris"
+     * @return HashMap with the mentioned above keys.
+     */
     public Map<String, Object> getProcessedData() {
         Query query = QueryFactory.create(this.query);
-        System.out.println(query);
 
         // Generate algebra
         Op op = Algebra.compile(query);
         op = Algebra.optimize(op);
-        System.out.println("AL: " + op);
 
         Element e = query.getQueryPattern();
         HashMap<String, TriplePath> tpf = new HashMap<>();

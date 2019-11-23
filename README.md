@@ -6,11 +6,23 @@ Approaches to vectorize Sparql queries and their metadata for Machine Learning t
 
 ### Run
 For run use that
+
+System.out.println("Try with some of this parameters:");
 ```$bash
-java -jar graph-edit-distance.jar /path/to/data_queries.csv /path_to_output/ /path/to/prefixes.txt 4
+ java -jar file.jar kmedoids /path/to/input.csv /path/to/output.csv /path/to/ids_time.csv #-of-centroids
+```
+#### For generate edit distances vectors
+```$bash
+java -jar file.jar edit-distance /path/to/input.csv /path/to/output.csv /path/to/prefixes #-of-cores
 ```
 Last number(4) is the number of cores or proccess to run in paralell.
 
+#### For generate vectors for deepset architecture:
+```$bash
+java -jar file.jar deepset-features /path/to/input.csv /path/to/output.csv tables,joins,predicates /path/to/prefixes [--cores=numOfCores] [--length=numOfTuples] [--output-delimiter=symbolToDelimitColumns]
+```
+
+            
 ### Compilation
 Execute to compile:
 ```$bash

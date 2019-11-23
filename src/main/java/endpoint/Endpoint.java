@@ -6,17 +6,32 @@ import semanticweb.sparql.preprocess.DeepSetFeatureExtractor;
 import semanticweb.sparql.preprocess.TDBExecutionAndFeature;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 
 public class Endpoint {
 
+    private static Map<String, String> map;
+    private static void makeMap(String[] args) {
+        map = new HashMap<>();
+        for (String arg : args) {
+            if (arg.contains("=")) {
+                //works only if the key doesn't have any '='
+                map.put(arg.substring(0, arg.indexOf('=')),
+                        arg.substring(arg.indexOf('=') + 1));
+            }
+        }
+    }
+
     public static void main(String[] args) throws Exception {
+        makeMap(args);
+
         //Getting parameters
         if(args.length == 0){
             System.out.println("Try with some of this parameters:");
             System.out.println("java -jar file.jar kmedoids /path/to/input.csv /path/to/output.csv /path/to/ids_time.csv #-of-centroids");
             System.out.println("java -jar file.jar edit-distance /path/to/input.csv /path/to/output.csv /path/to/prefixes #-of-cores");
-            System.out.println("java -jar file.jar deepset-features /path/to/input.csv /path/to/output.csv tables,joins,predicates /path/to/prefixes");
+            System.out.println("java -jar file.jar deepset-features /path/to/input.csv /path/to/output.csv tables,joins,predicates /path/to/prefixes [--cores=numOfCores] [--length=numOfTuples] [--output-delimiter=symbolToDelimitColumns]");
             return;
         }
         String[] params = new String[args.length-1];
@@ -37,17 +52,17 @@ public class Endpoint {
                 ArrayList<String[]> notused = SparqlUtils.getArrayFeaturesVector(params[0], params[1], params[2], params[3]);
             }
             else if (task.equals("deepset-features")) {
-                if(params.length == 5){
-                    // Case with a restrictive length of queries tu process
-                    DeepSetFeatureExtractor.getArrayFeaturesVector(params[0], params[1], params[2], params[3], Integer.parseInt(params[4]));
-                }
-                else if(params.length == 6){
-                    // Case for parallel process...
-                    DeepSetFeatureExtractor.getArrayFeaturesVectorParallel(params[0], params[1], params[2], params[3], Integer.parseInt(params[4]), Integer.parseInt(params[5]));
-                }
 
+                int cores =  map.get("--cores")  != null ? Integer.parseInt(map.get("--cores")) : 0;
+                int length = map.get("--length") != null ? Integer.parseInt(map.get("--length")): 0;
+                String output_delimiter = map.get("--output-delimiter") != null ? map.get("--length"): "~";
+
+                if(cores > 0) {
+                    DeepSetFeatureExtractor.getArrayFeaturesVectorParallel(params[0], params[1], params[2], params[3], length, cores, output_delimiter);
+                }
                 else {
-                    DeepSetFeatureExtractor.getArrayFeaturesVector(params[0], params[1], params[2], params[3], 0);
+                    // Case with a restrictive length of queries tu process
+                    DeepSetFeatureExtractor.getArrayFeaturesVector(params[0], params[1], params[2], params[3], length, output_delimiter);
                 }
             }
             else {
