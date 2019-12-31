@@ -151,7 +151,28 @@ public class SparqlUtils {
 		String delimiterRow = "\n";
 		return  getArrayFromCsvFile(url, delimiterCol, delimiterRow);
 	}
-
+	/**
+	 *
+	 * @return
+	 */
+	public static HashMap<String, String> getNamespacesStr(String url){
+		String prefixes = "";
+		Model model = ModelFactory.createDefaultModel();
+		try {
+			BufferedReader csvReader = new BufferedReader(new FileReader(url));
+			String row;
+			while ((row = csvReader.readLine()) != null) {
+				String[] predicates = row.split("\t");
+				model.setNsPrefix(predicates[0], predicates[1]);
+				prefixes = prefixes.concat("PREFIX ").concat(predicates[0]).concat(": ").concat("<").concat(predicates[1]).concat("> \n");
+			}
+			csvReader.close();
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+		}
+		return (HashMap<String, String>) model.getNsPrefixMap();
+	}
     /**
      *
      * @return

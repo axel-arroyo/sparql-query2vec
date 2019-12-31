@@ -7,6 +7,7 @@ import com.hp.hpl.jena.sparql.algebra.Algebra;
 import com.hp.hpl.jena.sparql.algebra.Op;
 import com.hp.hpl.jena.sparql.core.TriplePath;
 import com.hp.hpl.jena.sparql.syntax.*;
+import com.hp.hpl.jena.tdb.store.Hash;
 import org.junit.jupiter.api.Test;
 import semanticweb.sparql.Operator;
 import semanticweb.sparql.QDistanceHungarian;
@@ -319,32 +320,6 @@ public class SparqlUtilsTest {
                         queryTables = res[0];
                         queryVariables = res[1];
                         queryJoins = res[2];
-//                        if (!queryTables.contains(predicate.getURI())) {
-//                            queryTables.add(predicate.getURI());
-//                        }
-//                        //add variables subject to list
-//                        if (!queryVariables.contains(subject.getName())) {
-//                            queryVariables.add(subject.getName());
-//                        }
-//                        //add variables object to list
-//                        if (!queryVariables.contains(object.getName())) {
-//                            queryVariables.add(object.getName());
-//                        }
-//                        //add joins  var1_predicateURI_var2
-//                        queryJoins.add(
-//                                ""
-//                                        .concat("v")
-//                                        .concat(
-//                                                String.valueOf(queryVariables.indexOf(subject.getName()))
-//                                        )
-//                                        .concat("_")
-//                                        .concat(predicate.getURI())
-//                                        .concat("_")
-//                                        .concat("v")
-//                                        .concat(
-//                                                String.valueOf(queryVariables.indexOf(object.getName()))
-//                                        )
-//                        );
                     }
                     /**
                      * Logic for subject var, predicate uri, object int literal like (Var1.foaf:age, 29 )
@@ -390,6 +365,7 @@ public class SparqlUtilsTest {
             String a = "";
         }
     }
+
 
     private ArrayList[] processVarPredVar(
             ArrayList<String> queryTables,

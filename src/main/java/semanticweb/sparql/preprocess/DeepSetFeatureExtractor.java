@@ -3,6 +3,7 @@ package semanticweb.sparql.preprocess;
 import com.hp.hpl.jena.rdf.model.Model;
 import semanticweb.RecursiveDeepSetFeaturizeAction;
 import semanticweb.sparql.SparqlUtils;
+import semanticweb.sparql.utils.DBPediaUtils;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -16,17 +17,18 @@ public class DeepSetFeatureExtractor {
     public static Model model;
     public static String prefixes = "";
 
-    public static ArrayList<String> default_sets = new ArrayList<>(Arrays.asList("tables", "joins", "predicates_v2int", "predicates_v2uri"));
+    public static ArrayList<String> default_sets = new ArrayList<>(Arrays.asList("tables", "joins", "predicates_v2int", "predicates_v2uri", "pred_v2uri_cardinality"));
     public ArrayList<String> tablesOrder;
     public ArrayList<String> joinsOrder;
     public ArrayList<String> predicatesOrder;
     public ArrayList<String> predicatesUrisOrder;
-
+    public HashMap<String,Integer> predUrisCardinality;
     public DeepSetFeatureExtractor() {
         this.tablesOrder = new ArrayList<>();
         this.joinsOrder = new ArrayList<>();
         this.predicatesOrder = new ArrayList<>();
         this.predicatesUrisOrder = new ArrayList<>();
+        this.predUrisCardinality = new HashMap<>();
 //        default_sets.addAll(Arrays.asList("tables","joins","predicates_v2int", "predicates_v2uri"));
     }
 
@@ -38,7 +40,7 @@ public class DeepSetFeatureExtractor {
      * @param queryColumn Csv column that contain query string( Csv must contain other data)
      * @param idColumn    Csv column that contain the query id
      * @param length    Length of the queries with cardinality > zero
-     * @return
+     * @return a list of Queries in format [idQuery,Query,Cardinality]
      */
     public static ArrayList<ArrayList<String>> getArrayQueriesMetaFromCsv(String url, boolean header, int queryColumn, int idColumn, int cardinalityColumns, int length) {
         String row;
@@ -192,17 +194,22 @@ public class DeepSetFeatureExtractor {
      */
     public static void produceCsvArrayVectors(ArrayList<String> headers, ArrayList<Map<String, Object>> list, String filepath, String output_delimiter) {
         BufferedWriter br;
+        BufferedWriter brpred_uri;
         try {
             br = new BufferedWriter(new FileWriter(filepath));
 
             StringBuilder sb = new StringBuilder();
+            StringBuilder sbbrpred_uri = new StringBuilder();
             // Append strings from array
             for (String element : headers) {
                 sb.append(element);
                 sb.append(output_delimiter);
             }
-
+            brpred_uri = new BufferedWriter(new FileWriter(filepath.concat(".preduri.txt")));
             sb.append("\n");
+            HashMap<String, String> namespases = SparqlUtils.getNamespacesStr("/home/daniel/Documentos/Web_Semantica/Work/Sparql2vec/prefixes.txt");
+            HashMap<String,Integer> tpfCardinalities = new HashMap<>();
+            String ENDPOINT = "https://dbpedia.org/sparql";
             for (Map<String, Object> queryData : list) {
                 for (String header : headers) {
                     switch (header) {
@@ -238,9 +245,11 @@ public class DeepSetFeatureExtractor {
                                     sb.append(",");
                                     sb.append(element.get("operator"));
                                     sb.append(",");
-                                    sb.append(element.get("object"));
+                                    sb.append(element.get("value"));
+                                    sb.append(",");
                                 }
-                            } else {
+                            }
+                            else {
                                 sb.append("EMPTY_VALUE");
                             }
                             break;
@@ -254,6 +263,40 @@ public class DeepSetFeatureExtractor {
                                     sb.append(element.get("operator"));
                                     sb.append(",");
                                     sb.append(element.get("object"));
+                                    sb.append(",");
+                                }
+                            } else {
+                                sb.append("EMPTY_VALUE");
+                            }
+                            break;
+                        }
+                        case "pred_v2uri_cardinality": {
+                            ArrayList<HashMap<String, Object>> qPredicates = (ArrayList<HashMap<String, Object>>) queryData.get("queryPredicatesUris");
+                            if (qPredicates.size() > 0) {
+                                for (HashMap<String, Object> element : qPredicates) {
+
+                                    sb.append(element.get("col"));
+                                    sb.append(",");
+                                    sb.append(element.get("operator"));
+                                    sb.append(",");
+                                    sb.append(element.get("object"));
+                                    sb.append(",");
+                                    String hash = String.valueOf(element.get("sampling_query_id"));
+
+                                    if(tpfCardinalities.get(hash) != null) {
+                                        int card = tpfCardinalities.get(hash);
+                                        sb.append(card);
+                                        sb.append(",");
+                                    }
+                                    else {
+                                        String query = String.valueOf(element.get("sampling_query"));
+                                        int result = DBPediaUtils.execQuery(query, ENDPOINT,  namespases);
+                                        sb.append(result);
+                                        sb.append(",");
+                                        tpfCardinalities.put(hash,result);
+                                        sbbrpred_uri.append(hash.concat(" , ".concat(String.valueOf(result))));
+                                        sbbrpred_uri.append("\n");
+                                    }
                                 }
                             } else {
                                 sb.append("EMPTY_VALUE");
@@ -272,7 +315,9 @@ public class DeepSetFeatureExtractor {
             }
 
             br.write(sb.toString());
+            brpred_uri.write(sbbrpred_uri.toString());
             br.close();
+            brpred_uri.close();
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 public class NordendQueryExecution {
 	
-	private static String ENDPOINT = "http://localhost:3030/dbpedia/sparql";
+	private static String ENDPOINT = "https://dbpedia.org/sparql";
 	private static String QUERIES = "dbp-100-random.log";
 	
 	public static ResultSet queryTDB(String qStr) {
@@ -22,7 +22,7 @@ public class NordendQueryExecution {
 		ResultSet results = qexec.execSelect();
 		return results;
 
-	}	
+	}
 	
 	public static void executeQueries() throws IOException {
 		PrintStream psTime = new PrintStream("nordend_ex_time");

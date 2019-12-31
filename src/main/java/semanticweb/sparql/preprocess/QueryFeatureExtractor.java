@@ -20,12 +20,18 @@ public class QueryFeatureExtractor {
     private ArrayList<String> queryTables;
     private ArrayList<String> queryVariables;
     private ArrayList<String> queryJoins;
+    private HashMap<String, HashMap<String, ArrayList<String>>> queryJoinsV1Nodes;
     private ArrayList<HashMap<String, Object>> queryPredicates;
     private ArrayList<HashMap<String, Object>> queryPredicatesUris;
+    private ArrayList<HashMap<String, Object>> queryPredicatesUrisV1;
     private String query;
     private String id;
     private String cardinality;
-
+    public static int TWO_INCOMING_PREDICATES = 1;
+    public static int TWO_OUTGOING_PREDS = 2;
+    public static int ONE_WAY_TWO_PREDS = 3;
+    public static int TWO_OUTGOING_PRED_VAR_URI = 4;
+    public static int TWO_INCOMING_PREDS_VAR_LITERAL = 5;
     /**
      * Constructor for query String
      * @param query
@@ -35,8 +41,10 @@ public class QueryFeatureExtractor {
         this.queryTables = new ArrayList<>();
         this.queryVariables = new ArrayList<>();
         this.queryJoins = new ArrayList<>();
+        this.queryJoinsV1Nodes = new HashMap<>();
         this.queryPredicates = new ArrayList<>();
         this.queryPredicatesUris = new ArrayList<>();
+        this.queryPredicatesUrisV1 = new ArrayList<>();
     }
 
     /**
@@ -50,10 +58,72 @@ public class QueryFeatureExtractor {
         this.queryTables = new ArrayList<>();
         this.queryVariables = new ArrayList<>();
         this.queryJoins = new ArrayList<>();
+        this.queryJoinsV1Nodes = new HashMap<>();
         this.queryPredicates = new ArrayList<>();
         this.queryPredicatesUris = new ArrayList<>();
+        this.queryPredicatesUrisV1 = new ArrayList<>();
+    }
+    private void processTPFJoinsV1(Node subject, Node predicate, Node object){
+        String subjectName = subject.getName();
+        String objectName = object.getName();
+        if (queryJoinsV1Nodes.containsKey(subjectName)){
+            //If nodes contain the variable...
+            HashMap<String, ArrayList<String>> node = queryJoinsV1Nodes.get(subjectName);
+            // Register outgoing edge.
+            node.get("outgoing").add(predicate.getURI());
+        }
+        else {
+            HashMap<String, ArrayList<String>> node = new HashMap<>();
+            ArrayList<String> list = new ArrayList<>();
+            list.add(predicate.getURI());
+            node.put("incoming", new ArrayList<>());
+            node.put("outgoing_uri", new ArrayList<>());
+            node.put("outgoing", list);
+            queryJoinsV1Nodes.put(subjectName, node);
+
+        }
+        //Adding incoming edges of triple;
+        if (queryJoinsV1Nodes.containsKey(objectName)){
+            //If nodes contain the variable...
+            HashMap<String, ArrayList<String>> node = queryJoinsV1Nodes.get(objectName);
+            // Register outgoing edge.
+            node.get("incoming").add(predicate.getURI());
+        }
+        else {
+            HashMap<String, ArrayList<String>> node = new HashMap<>();
+            ArrayList<String> list = new ArrayList<>();
+            list.add(predicate.getURI());
+            node.put("incoming", list);
+            node.put("outgoing", new ArrayList<>());
+            node.put("outgoing_uri", new ArrayList<>());
+            queryJoinsV1Nodes.put(objectName,node);
+        }
     }
 
+    /**
+     * Processing Join between Predicates to target a var and a Literal
+     * @param subject
+     * @param predicate
+     * @param object
+     */
+    private void processTPFJoinsVar_URI(Node subject, Node predicate, Node object){
+        String subjectName = subject.getName();
+        if (queryJoinsV1Nodes.containsKey(subjectName)){
+            //If nodes contain the variable...
+            HashMap<String, ArrayList<String>> node = queryJoinsV1Nodes.get(subjectName);
+            // Register outgoing edge that target to a literal Var -> pred -> uri
+            node.get("outgoing_uri").add(predicate.getURI());
+        }
+        else {
+            HashMap<String, ArrayList<String>> node = new HashMap<>();
+            ArrayList<String> list = new ArrayList<>();
+            list.add(predicate.getURI());
+            node.put("outgoing", new ArrayList<>());
+            node.put("incoming", new ArrayList<>());
+            node.put("outgoing_uri", list);
+            queryJoinsV1Nodes.put(subjectName, node);
+        }
+    }
     private void processVarPredVar(Node subject, Node predicate, Node object) {
         if (!this.queryTables.contains(predicate.getURI())) {
             this.queryTables.add(predicate.getURI());
@@ -81,6 +151,7 @@ public class QueryFeatureExtractor {
                                 String.valueOf(this.queryVariables.indexOf(object.getName()))
                         )
         );
+        this.processTPFJoinsV1(subject, predicate, object);
     }
 
     /**
@@ -128,7 +199,11 @@ public class QueryFeatureExtractor {
         pred.put("value", subject.getLiteralValue());
         queryPredicates.add(pred);
     }
-
+    private String getQueryPredUri(String triple){
+        String head = "SELECT (count( ?var )  AS ?total) WHERE { \n";
+        String end = "\n }";
+        return head.concat(triple).concat(end);
+    }
     /**
      * Logic for subject var, predicate uri, object int literal like (Var1.rdf:type, foaf:Person )
      *
@@ -140,7 +215,6 @@ public class QueryFeatureExtractor {
         if (!this.queryTables.contains(predicate.getURI())) {
             this.queryTables.add(predicate.getURI());
         }
-        //add variables subject to list
         if (!this.queryVariables.contains(subject.getName())) {
             this.queryVariables.add(subject.getName());
         }
@@ -148,7 +222,22 @@ public class QueryFeatureExtractor {
         pred.put("col", predicate.getURI());
         pred.put("operator", Operator.EQUAL);
         pred.put("object", object.getURI());
+        String hash = String.valueOf(pred.get("col")).concat(String.valueOf(pred.get("operator"))).concat(String.valueOf(pred.get("object")));
+        pred.put("sampling_query_id", hash);
+
+        pred.put("sampling_query", getQueryPredUri(
+                "?var "
+                        .concat("<")
+                        .concat(String.valueOf(pred.get("col")))
+                        .concat(">")
+                        .concat(" ")
+                        .concat("<")
+                        .concat(String.valueOf(pred.get("object")))
+                        .concat(">")
+                )
+        );
         this.queryPredicatesUris.add(pred);
+        this.processTPFJoinsVar_URI(subject, predicate, object);
     }
 
     /**
@@ -170,6 +259,21 @@ public class QueryFeatureExtractor {
         pred.put("col", predicate.getURI());
         pred.put("operator", Operator.EQUAL);
         pred.put("object", subject.getURI());
+
+        String hash = String.valueOf(pred.get("col")).concat(String.valueOf(pred.get("operator"))).concat(String.valueOf(pred.get("object")));
+        pred.put("sampling_query_id", hash);
+
+        pred.put("sampling_query", getQueryPredUri(
+                "<"
+                        .concat(String.valueOf(pred.get("object")))
+                        .concat(">")
+                        .concat(" ")
+                        .concat("<")
+                        .concat(String.valueOf(pred.get("col")))
+                        .concat(">")
+                        .concat(" ?var")
+                        .concat( " . ")
+        ));
         this.queryPredicatesUris.add(pred);
     }
 
@@ -227,9 +331,13 @@ public class QueryFeatureExtractor {
             if (subject.isVariable() && predicate.isURI() && object.isVariable()) {
                 //if not int table list add to.
                 this.processVarPredVar(subject, predicate, object);
-            } else if (subject.isVariable() && predicate.isURI() && object.isURI()) {
+            }
+
+            else if (subject.isVariable() && predicate.isURI() && object.isURI()) {
                 this.processVarPredUri(subject, predicate, object);
-            } else if (
+            }
+
+            else if (
                     subject.isVariable() && predicate.isURI() &&
                             object.isLiteral() && object.getLiteralDatatype() != null &&
                             object.getLiteralDatatype().getClass() == XSDBaseNumericType.class) {
@@ -246,12 +354,14 @@ public class QueryFeatureExtractor {
             }
             // Todo Incorporate other cases...
         }
+        ArrayList<ArrayList> queryJoinsV1Vec = getRepresentationJoins(this.queryJoinsV1Nodes);
         Map<String, Object> result = new HashMap<>();
         result.put("queryTables", this.queryTables);
         result.put("queryVariables", this.queryVariables);
         result.put("queryJoins", this.queryJoins);
         result.put("queryPredicates", this.queryPredicates);
         result.put("queryPredicatesUris", this.queryPredicatesUris);
+        result.put("queryJoinsV1Vec", queryJoinsV1Vec);
         if (this.id != null) {
             result.put("id", this.id);
         }
@@ -261,6 +371,66 @@ public class QueryFeatureExtractor {
         return result;
     }
 
+    public ArrayList<ArrayList> getRepresentationJoins(HashMap<String, HashMap<String, ArrayList<String>>> queryJoinsV1Nodes) {
+        ArrayList<ArrayList> joisRep = new ArrayList<>();
+        ArrayList<String> keys =  new ArrayList<>(queryJoinsV1Nodes.keySet());
+        for (int i = 0; i <keys.size() ; i++) {
+            HashMap<String, ArrayList<String>> stringArrayListHashMap = queryJoinsV1Nodes.get(keys.get(i));
+            // Processing incomings...
+            for (int j = 0; j < stringArrayListHashMap.get("incoming").size(); j++) {
+                // Incoming -> node -> outgoings
+                for (int k = 0; k < stringArrayListHashMap.get("outgoing").size(); k++) {
+                    ArrayList<String> trainSample = new ArrayList<>();
+                    trainSample.add(stringArrayListHashMap.get("incoming").get(j));
+                    trainSample.add(stringArrayListHashMap.get("outgoing").get(k));
+                    trainSample.add(String.valueOf(QueryFeatureExtractor.ONE_WAY_TWO_PREDS));
+                    joisRep.add(trainSample);
+                }
+                // Incoming --> node <-- Incoming
+                for (int k = 0; k < stringArrayListHashMap.get("incoming").size(); k++) {
+                    String predA = stringArrayListHashMap.get("incoming").get(j);
+                    String predB = stringArrayListHashMap.get("incoming").get(k);
+                    //If are diferents then add to list
+                    if(!predA.equals(predB)){
+                        ArrayList<String> trainSample = new ArrayList<>();
+                        trainSample.add(predA);
+                        trainSample.add(predB);
+                        trainSample.add(String.valueOf(QueryFeatureExtractor.TWO_INCOMING_PREDICATES));
+                        joisRep.add(trainSample);
+                    }
+                }
+            }
+            // Processing outgoings...
+            for (int j = 0; j < stringArrayListHashMap.get("outgoing").size(); j++) {
+                // VAR <--OUTGOING <-- node --> OUTGOING --> VAR
+                String predA = stringArrayListHashMap.get("outgoing").get(j);
+                for (int k = 0; k < stringArrayListHashMap.get("outgoing").size(); k++) {
+                    String predB = stringArrayListHashMap.get("outgoing").get(k);
+                    //If are diferents then add to list
+                    if(!predA.equals(predB)){
+                        ArrayList<String> trainSample = new ArrayList<>();
+                        trainSample.add(predA);
+                        trainSample.add(predB);
+                        trainSample.add(String.valueOf(QueryFeatureExtractor.TWO_OUTGOING_PREDS));
+                        joisRep.add(trainSample);
+                    }
+                }
+                // VAR <--OUTGOING <-- node --> OUTGOING --> URI
+                for (int k = 0; k < stringArrayListHashMap.get("outgoing_uri").size(); k++) {
+                    String predB = stringArrayListHashMap.get("outgoing_uri").get(k);
+                    //If are diferents then add to list
+                    if(!predA.equals(predB)){
+                        ArrayList<String> trainSample = new ArrayList<>();
+                        trainSample.add(predA);
+                        trainSample.add(predB);
+                        trainSample.add(String.valueOf(QueryFeatureExtractor.TWO_OUTGOING_PRED_VAR_URI));
+                        joisRep.add(trainSample);
+                    }
+                }
+            }
+        }
+        return joisRep;
+    }
     public static void main(String[] args) {
         String s = "PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT ?name ?email WHERE {  ?x foaf:knows ?y . ?y foaf:name ?name .  OPTIONAL { ?y foaf:mbox ?email }  }";
         String s1 = "PREFIX dbo: <http://dbpedia.org/ontology/>\n" +

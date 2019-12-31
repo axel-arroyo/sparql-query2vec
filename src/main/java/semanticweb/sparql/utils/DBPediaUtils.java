@@ -1,11 +1,15 @@
 package semanticweb.sparql.utils;
 
+import com.hp.hpl.jena.query.*;
+import com.hp.hpl.jena.rdf.model.RDFNode;
+import com.hp.hpl.jena.rdf.model.impl.LiteralImpl;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.message.BasicNameValuePair;
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 
@@ -100,8 +104,72 @@ public class DBPediaUtils {
 		System.out.println(DBPediaUtils.getParam(sparql, "query"));
 		
 	}
-	
-	
+	public static int execQuery(String query, String ENDPOINT, HashMap<String,String> namespaces) {
+
+		Query q = QueryFactory.create(query);
+		QueryExecution qexec = QueryExecutionFactory.sparqlService(ENDPOINT, q);
+		ResultSet results = qexec.execSelect();
+		RDFNode res = results.next().get("total");
+		return ((LiteralImpl) res).getInt();
+	}
+
+	/**
+	 * Versión de ejecución de un triple con namespaces.
+	 * @param triple
+	 * @param ENDPOINT
+	 * @param namespaces
+	 * @return
+	 */
+	public static int execQueryCountTripleWithNS(String triple, String ENDPOINT, HashMap<String,String> namespaces) {
+		String nsToInclude = "";
+		ArrayList<String> included = new ArrayList<>();
+
+		String[] words = triple.split(" ");
+		for (int i = 0; i <words.length; i++) {
+			String[] pref = words[i].split(":");
+			if (pref.length > 0 && pref[0].length() >1 && included.indexOf(pref[0]) == -1 ) {
+				String valPref = namespaces.get(pref[0]);
+				if(valPref != null) {
+					included.add(pref[0]);
+					nsToInclude = nsToInclude.concat("PREFIX ").concat(pref[0]).concat(": ").concat("<").concat(valPref).concat("> \n");
+				}
+			}
+		}
+		String head = "SELECT (count( ?var )  AS ?total) WHERE { \n";
+		String end = "\n }";
+		nsToInclude = nsToInclude.concat("PREFIX ").concat("").concat(": ").concat("<").concat("http://dbpedia.org/resource/").concat("> \n");
+		nsToInclude = nsToInclude.concat("PREFIX ").concat("xsd").concat(": ").concat("<").concat(namespaces.get("xsd")).concat("> \n");
+		String q = nsToInclude.concat("\n").concat(head.concat(triple).concat(end));
+		Query query = QueryFactory.create(q);
+		QueryExecution qexec = QueryExecutionFactory.sparqlService(ENDPOINT, query);
+		ResultSet results = qexec.execSelect();
+		RDFNode res = results.next().get("total");
+		return ((LiteralImpl) res).getInt();
+	}
+	public static int execQueryCount(String qStr, String ENDPOINT, HashMap<String,String> namespaces) {
+		String nsToInclude = "";
+		ArrayList<String> included = new ArrayList<>();
+
+		String[] words = qStr.split(" ");
+		for (int i = 0; i <words.length; i++) {
+			String[] pref = words[i].split(":");
+			if (pref.length > 0 && pref[0].length() >1 && included.indexOf(pref[0]) == -1 ) {
+				String valPref = namespaces.get(pref[0]);
+				if(valPref != null) {
+					included.add(pref[0]);
+					nsToInclude = nsToInclude.concat("PREFIX ").concat(pref[0]).concat(": ").concat("<").concat(valPref).concat("> \n");
+				}
+			}
+		}
+		nsToInclude = nsToInclude.concat("PREFIX ").concat("xsd").concat(": ").concat("<").concat(namespaces.get("xsd")).concat("> \n");
+		String q = nsToInclude.concat("\n").concat(qStr);
+		Query query = QueryFactory.create(q);
+		QueryExecution qexec = QueryExecutionFactory.sparqlService(ENDPOINT, query);
+		ResultSet results = qexec.execSelect();
+		RDFNode res = results.next().get("total");
+		return ((LiteralImpl) res).getInt();
+	}
+
 	public static String getEncodedQuery(String q) {
 		Charset utf8charset = Charset.forName("UTF-8");
 		List<NameValuePair> params = new ArrayList<NameValuePair>();
