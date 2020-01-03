@@ -53,16 +53,17 @@ public class Endpoint {
             }
             else if (task.equals("deepset-features")) {
 
+                String urlTFPMap =  map.get("--tpf-map-file")  != null ? map.get("--tpf-map-file") : "";
                 int cores =  map.get("--cores")  != null ? Integer.parseInt(map.get("--cores")) : 0;
                 int length = map.get("--length") != null ? Integer.parseInt(map.get("--length")): 0;
                 String output_delimiter = map.get("--output-delimiter") != null ? map.get("--output-delimiter"): "~";
 
                 if(cores > 0) {
-                    DeepSetFeatureExtractor.getArrayFeaturesVectorParallel(params[0], params[1], params[2], params[3], length, cores, output_delimiter);
+                    DeepSetFeatureExtractor.getArrayFeaturesVectorParallel(params[0], params[1], params[2], params[3], length, cores, output_delimiter,urlTFPMap);
                 }
                 else {
                     // Case with a restrictive length of queries tu process
-                    DeepSetFeatureExtractor.getArrayFeaturesVector(params[0], params[1], params[2], params[3], length, output_delimiter);
+                    DeepSetFeatureExtractor.getArrayFeaturesVector(params[0], params[1], params[2], params[3], length, output_delimiter,urlTFPMap);
                 }
             }
             else {

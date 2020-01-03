@@ -218,6 +218,16 @@ public class SparqlUtils {
         return model;
     }
 
+    public static HashMap<String,Integer> readQueryTPFSampling(String route) throws IOException {
+		InputStreamReader csv  = new InputStreamReader(new FileInputStream(route));
+		CSVReader csvReader = new CSVReader (csv);
+		String[] record;
+		HashMap<String,Integer> tpfSamplings = new HashMap<>();
+		while ((record = csvReader.readNext()) != null) {
+			tpfSamplings.put(record[0],Integer.parseInt(record[1].replaceAll(" ","")));
+		}
+		return tpfSamplings;
+	}
     /**
 	 *
 	 * @return
