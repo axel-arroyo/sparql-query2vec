@@ -26,7 +26,7 @@ public class RecurrentFeaturesExtractor  extends DeepSetFeatureExtractor{
      * @param input_delimiter   Delimiter for csv file column.
      * @return ArrayList with Map of queries data generated, see @{@link QueryFeatureExtractor}
      */
-    public static ArrayList<Map<String, Object>> getArrayFeaturesVector(String urlQueries,
+    public ArrayList<Map<String, Object>> getArrayFeaturesVector(String urlQueries,
                                                                         String output,
                                                                         String namespaces,
                                                                             int queryColumn,
@@ -41,7 +41,7 @@ public class RecurrentFeaturesExtractor  extends DeepSetFeatureExtractor{
         }
         ArrayList<Map<String, Object>> vectors = new ArrayList<>();
 
-        ArrayList<ArrayList<String>> featInQueryList = getArrayQueriesMetaFromCsv(urlQueries, true, input_delimiter, queryColumn, idColumn, execTimeColumn, length);
+        ArrayList<ArrayList<String>> featInQueryList = this.getArrayQueriesMetaFromCsv(urlQueries, true, input_delimiter, queryColumn, idColumn, execTimeColumn, length);
         //we use the size of array intead of -1(csv header) because we use extra column called others.
         for (ArrayList<String> queryArr : featInQueryList) {
             try {
@@ -60,81 +60,7 @@ public class RecurrentFeaturesExtractor  extends DeepSetFeatureExtractor{
         produceCsvArrayVectors(vectorHeader, vectors, output, output_delimiter);
         return vectors;
     }
-    /**
-     * Retrieve list of queries tuples  in csv dataset file.
-     *
-     * @param url         Url fil csv with queries info.
-     * @param header      If csv include header
-     * @param delimiter   Delimiter character
-     * @param queryColumn Csv column that contain query string( Csv must contain other data)
-     * @param idColumn    Csv column that contain the query id
-     * @param length      Length of the queries with cardinality > zero
-     * @return a list of Queries in format [idQuery,Query,Cardinality]
-     */
-    public static ArrayList<ArrayList<String>> getArrayQueriesMetaFromCsv(String url, boolean header, String delimiter, int queryColumn, int idColumn, int execTimeColumn, int length) {
-        String row;
-        ArrayList<ArrayList<String>> arrayList = new ArrayList<ArrayList<String>>();
-        int countQueryInProcess = 0;
-        try {
-            BufferedReader csvReader = new BufferedReader(new FileReader(url));
-            if (header) {
-                //Ignore first read that corresponde with header
-                csvReader.readLine();
-            }
-            // if length is equal to zero not restrict the length of queries.
-            while ((row = csvReader.readLine()) != null && (countQueryInProcess < length || length == 0)) {
-                String[] rowArray = row.split(delimiter);
 
-                while (rowArray.length > 9) {
-                    ArrayList<String> listTemp = new ArrayList<>();
-                    for (int i = 0; i < rowArray.length ; i++) {
-                        if(i < queryColumn){
-                            listTemp.add(i,rowArray[i]);
-                        }
-                        else if(i == queryColumn){
-                            String first = rowArray[queryColumn];
-                            String second = rowArray[queryColumn + 1];
-                            listTemp.add(queryColumn, first.concat(", ").concat(second));
-                        }
-                        else if(i == queryColumn +1){
-                            continue;
-                        }
-                        else {
-                            listTemp.add(i- 1, rowArray[i]);
-                        }
-
-                    }
-                    rowArray = listTemp.toArray(new String[0]);
-                }
-
-                row = rowArray[queryColumn];
-                //Remove quotes in init and end of the string...
-                row = row.replaceAll("^\"|\"$", "");
-                ArrayList<String> predicatesAndId = new ArrayList<>();
-                if (idColumn >= 0)
-                    predicatesAndId.add(rowArray[idColumn]);
-                predicatesAndId.add(row);
-                predicatesAndId.add(rowArray[execTimeColumn]);
-                try {
-                    if (Integer.parseInt(rowArray[execTimeColumn]) > 0) {
-                        countQueryInProcess++;
-                    } else {
-                        // If cardinality not > 0 not add the query to list.
-                        continue;
-                    }
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                    continue;
-                }
-
-                arrayList.add(predicatesAndId);
-            }
-            csvReader.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return arrayList;
-    }
 
     /**
      * Create a csv with array data passed as parameters.

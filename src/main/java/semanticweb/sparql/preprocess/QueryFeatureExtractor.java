@@ -155,6 +155,29 @@ public class QueryFeatureExtractor {
     }
 
     /**
+     * Logic for subject var, predicate uri, object String literal like (Var1.foaf:name, 'daniel' )
+     *
+     * @param subject   Subject of the triple pattern frame
+     * @param predicate Predicate  of the triple pattern frame
+     * @param object    Object  of the triple pattern frame
+     */
+    private void processVarPredLiteral(Node subject, Node predicate, Node object) {
+        if (!queryTables.contains(predicate.getURI())) {
+            queryTables.add(predicate.getURI());
+        }
+        //add variables subject to list
+        if (!queryVariables.contains(subject.getName())) {
+            queryVariables.add(subject.getName());
+        }
+        //add Literal object to list
+        HashMap<String, Object> pred = new HashMap<>();
+        pred.put("col", predicate.getURI());
+        pred.put("operator", Operator.EQUAL);
+        pred.put("value", object.getLiteralValue());
+        queryPredicates.add(pred);
+    }
+
+    /**
      * Logic for subject var, predicate uri, object int literal like (Var1.foaf:age, 29 )
      *
      * @param subject   Subject of the triple pattern frame
@@ -328,28 +351,40 @@ public class QueryFeatureExtractor {
             Node object = t.getObject();
             Node predicate = t.getPredicate();
 
+            //           VAR                       URI                 VAR
             if (subject.isVariable() && predicate.isURI() && object.isVariable()) {
                 //if not int table list add to.
                 this.processVarPredVar(subject, predicate, object);
             }
-
+            //           VAR                       URI                 URI
             else if (subject.isVariable() && predicate.isURI() && object.isURI()) {
                 this.processVarPredUri(subject, predicate, object);
             }
-
+            //           VAR                       URI                 LIT_NUMBER
             else if (
-                    subject.isVariable() && predicate.isURI() &&
-                            object.isLiteral() && object.getLiteralDatatype() != null &&
-                            object.getLiteralDatatype().getClass() == XSDBaseNumericType.class) {
+                    subject.isVariable() &&
+                    predicate.isURI() &&
+                    object.isLiteral() && object.getLiteralDatatype() != null && object.getLiteralDatatype().getClass() == XSDBaseNumericType.class) {
                 this.processVarPredNumeric(subject, predicate, object);
             }
+            //           VAR                       URI                 LITERAL
+            else if (
+                    subject.isVariable() &&
+                    predicate.isURI() &&
+                    object.isLiteral()) {
+                    this.processVarPredLiteral(subject, predicate, object);
+            }
+
             //Less probables
+            //           URI                       URI                 VAR
             else if (subject.isURI() && predicate.isURI() && object.isVariable()) {
                 this.processUriPredVar(subject, predicate, object);
-            } else if (
-                    object.isVariable() && predicate.isURI() &&
-                            subject.isLiteral() && subject.getLiteralDatatype() != null &&
-                            subject.getLiteralDatatype().getClass() == XSDBaseNumericType.class) {
+            }
+            //           LIT_Numeric               URI                 VAR
+            else if (
+                    subject.isLiteral() &&
+                    subject.getLiteralDatatype() != null &&
+                    subject.getLiteralDatatype().getClass() == XSDBaseNumericType.class && object.isVariable() && predicate.isURI()) {
                 this.processNumericPredVar(subject, predicate, object);
             }
             // Todo Incorporate other cases...

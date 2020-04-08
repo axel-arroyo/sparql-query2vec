@@ -19,7 +19,8 @@ import java.util.*;
 import java.util.concurrent.ForkJoinPool;
 
 public class SparqlUtils {
-	
+
+
 	final public static String SPARQL_VAR_NS = "http://wimmics.inria.fr/kolflow/qp#";
     public static Model model;
     public static String prefixes = "";
@@ -35,8 +36,8 @@ public class SparqlUtils {
 
 		ResultSet results = exec.execSelect();
 		try {
-			BufferedWriter br = new BufferedWriter(new FileWriter("properties.txt"));
-			BufferedWriter prop_count = new BufferedWriter(new FileWriter("properties_count.csv"));
+			BufferedWriter br = new BufferedWriter(new FileWriter("properties1.txt"));
+			BufferedWriter prop_count = new BufferedWriter(new FileWriter("properties_count1.csv"));
 
 			StringBuilder sb = new StringBuilder();
 			StringBuilder sb2 = new StringBuilder();
@@ -197,7 +198,10 @@ public class SparqlUtils {
     }
     /**
      *
-     * @return
+	 * Read a file with prefix in format:
+	 * 	PREFIX b3s: <http://b3s.openlinksw.com/>
+	 * 	PREFIX b3s2: <http://b3s.openlinksw2.com/>
+     * @return a {@link Model} object with the prefix loaded
      */
     public static Model getNamespacesDBPed(String url){
 
@@ -218,13 +222,19 @@ public class SparqlUtils {
         return model;
     }
 
-    public static HashMap<String,Integer> readQueryTPFSampling(String route) throws IOException {
+    public static HashMap<String,Integer> readQueryTPFSampling(String route, Character separator) throws IOException {
 		InputStreamReader csv  = new InputStreamReader(new FileInputStream(route));
-		CSVReader csvReader = new CSVReader (csv);
+		CSVReader csvReader = new CSVReader (csv,separator);
 		String[] record;
 		HashMap<String,Integer> tpfSamplings = new HashMap<>();
+		int count = 0;
 		while ((record = csvReader.readNext()) != null) {
-			tpfSamplings.put(record[0],Integer.parseInt(record[1].replaceAll(" ","")));
+			if(record[0].equals("")){
+				continue;
+			}
+			count++;
+			System.out.println(count);
+			tpfSamplings.put(record[0].split("/")[8],Integer.parseInt(record[1].replaceAll(" ","")));
 		}
 		return tpfSamplings;
 	}
@@ -233,7 +243,7 @@ public class SparqlUtils {
 	 * @return
 	 */
 	public static Model getNamespaces(){
-		String url = "/home/daniel/Documentos/Web_Semantica/Work/Sparql2vec/prefixes.txt";
+		String url = "Sparql2vec/prefixes.txt";
 		return getNamespaces(url);
 	}
     /**

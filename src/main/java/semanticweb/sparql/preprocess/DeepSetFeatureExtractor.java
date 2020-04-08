@@ -1,5 +1,6 @@
 package semanticweb.sparql.preprocess;
 
+import com.google.common.hash.Hashing;
 import com.hp.hpl.jena.rdf.model.Model;
 import semanticweb.RecursiveDeepSetFeaturizeAction;
 import semanticweb.sparql.SparqlUtils;
@@ -13,16 +14,17 @@ import java.util.Map;
 import java.util.concurrent.ForkJoinPool;
 
 
-public class DeepSetFeatureExtractor {
+public class DeepSetFeatureExtractor extends  FeaturesExtractorBase{
     public static Model model;
     public static String prefixes = "";
 
-    public static ArrayList<String> default_sets = new ArrayList<>(Arrays.asList("tables", "joins","joins_v1", "predicates_v2int", "predicates_v2uri", "pred_v2uri_cardinality"));
+    public static ArrayList<String> default_sets = new ArrayList<>(Arrays.asList("tables", "joins", "joins_v1", "predicates_v2int", "predicates_v2uri", "pred_v2uri_cardinality"));
     public ArrayList<String> tablesOrder;
     public ArrayList<String> joinsOrder;
     public ArrayList<String> predicatesOrder;
     public ArrayList<String> predicatesUrisOrder;
-    public HashMap<String,Integer> predUrisCardinality;
+    public HashMap<String, Integer> predUrisCardinality;
+
     public DeepSetFeatureExtractor() {
         this.tablesOrder = new ArrayList<>();
         this.joinsOrder = new ArrayList<>();
@@ -33,73 +35,45 @@ public class DeepSetFeatureExtractor {
     }
 
     /**
-     * Retrieve list of queries tuples  in csv dataset file.
+     * Retrieve vectors for DeepSet architecture with fixed column indexes
      *
-     * @param url   Url fil csv with queries info.
-     * @param header      If csv include header
-     * @param queryColumn Csv column that contain query string( Csv must contain other data)
-     * @param idColumn    Csv column that contain the query id
-     * @param length    Length of the queries with cardinality > zero
-     * @return a list of Queries in format [idQuery,Query,Cardinality]
+     * @param urlQueries       Url for queries file.
+     * @param output           Url for output file.
+     * @param namespaces       Url for Sparql prefixes file.
+     * @param length           Length of queries to get from the csv queries file.
+     * @param output_delimiter Delimiter for csv file column.
+     * @param input_delimiter  Delimiter for csv file column.
+     * @return ArrayList with Map of queries data generated, see @{@link QueryFeatureExtractor}
      */
-    public static ArrayList<ArrayList<String>> getArrayQueriesMetaFromCsv(String url, boolean header, int queryColumn, int idColumn, int cardinalityColumns, int length) {
-        String row;
-        ArrayList<ArrayList<String>> arrayList = new ArrayList<ArrayList<String>>();
-        int countQueryInProcess = 0;
-        try {
-            BufferedReader csvReader = new BufferedReader(new FileReader(url));
-            if (header) {
-                //Ignore first read that corresponde with header
-                csvReader.readLine();
-            }
-            // if length is equal to zero not restrict the length of queries.
-            while ((row = csvReader.readLine()) != null && (countQueryInProcess < length || length == 0)) {
-                String[] rowArray = row.split(",");
-                row = rowArray[queryColumn];
-                //Remove quotes in init and end of the string...
-                row = row.replaceAll("^\"|\"$", "");
-                ArrayList<String> predicatesAndId = new ArrayList<>();
-                if (idColumn >= 0)
-                    predicatesAndId.add(rowArray[idColumn]);
-                predicatesAndId.add(row);
-                predicatesAndId.add(rowArray[cardinalityColumns]);
-                try {
-                    if (Integer.parseInt(rowArray[cardinalityColumns]) > 0) {
-                        countQueryInProcess++;
-                    }
-                    else {
-                        // If cardinality not > 0 not add the query to list.
-                        continue;
-                    }
-                }
-                catch (Exception ex){
-                    ex.printStackTrace();
-                    continue;
-                }
+    public ArrayList<Map<String, Object>> getArrayFeaturesVector(String urlQueries, String output, String sets, String namespaces, int length, String output_delimiter, String input_delimiter, String urlTFPMap) {
 
-                arrayList.add(predicatesAndId);
-            }
-            csvReader.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return arrayList;
+        return getArrayFeaturesVector(urlQueries, output, sets, namespaces, 1, 0, 8, length, output_delimiter, input_delimiter, urlTFPMap);
     }
 
     /**
      * Retrieve vectors for DeepSet architecture.
      *
-     * @param urlQueries Url for queries file.
-     * @param output Url for output file.
-     * @param namespaces Url for Sparql prefixes file.
-     * @param length Length of queries to get from the csv queries file.
-     * @param output_delimiter Delimiter for csv file column.
+     * @param urlQueries        Url for queries file.
+     * @param output            Url for output file.
+     * @param namespaces        Url for Sparql prefixes file.
+     * @param queryColumn       query column position.
+     * @param idColumn          IdColumn position.
+     * @param cardinalityColumn cardinality column position.
+     * @param length            Length of queries to get from the csv queries file.
+     * @param output_delimiter  Delimiter for csv file column.
+     * @param input_delimiter   Delimiter for csv file column.
      * @return ArrayList with Map of queries data generated, see @{@link QueryFeatureExtractor}
      */
-    public static ArrayList<Map<String, Object>> getArrayFeaturesVector(String urlQueries, String output, String sets, String namespaces, int length,String output_delimiter,String urlTFPMap) {
+    public ArrayList<Map<String, Object>> getArrayFeaturesVector(String urlQueries, String output, String sets,
+                                                                        String namespaces, int queryColumn, int idColumn,
+                                                                        int cardinalityColumn, int length,
+                                                                        String output_delimiter,
+                                                                        String input_delimiter,
+                                                                        String urlTFPMap) {
 
-        model = SparqlUtils.getNamespacesDBPed(namespaces);
-
+        if(!namespaces.equals("false")){
+            model = SparqlUtils.getNamespacesDBPed(namespaces);
+        }
         ArrayList<Map<String, Object>> vectors = new ArrayList<>();
 
         ArrayList<String> featuresArray = new ArrayList<>();
@@ -112,15 +86,27 @@ public class DeepSetFeatureExtractor {
                 }
             }
         }
-
-        ArrayList<ArrayList<String>> featInQueryList = getArrayQueriesMetaFromCsv(urlQueries, true, 1, 0, 8,length);
+        String extract_tpf_dir = "/mnt/46d157e4-f3b2-4033-90d8-ed2b2b56139e/wadiv_data/tpf_queries";
+        HashMap<String,String> tpf_card_queries = new HashMap<>();
+        ArrayList<ArrayList<String>> featInQueryList = this.getArrayQueriesMetaFromCsv(urlQueries, true, input_delimiter, queryColumn, idColumn, cardinalityColumn, length);
         //we use the size of array intead of -1(csv header) because we use extra column called others.
-        boolean initializeHeaders = true;
         for (ArrayList<String> queryArr : featInQueryList) {
             try {
                 QueryFeatureExtractor qfe = new QueryFeatureExtractor(queryArr);
                 Map<String, Object> queryVecData = qfe.getProcessedData();
                 vectors.add(queryVecData);
+                ArrayList qpu = (ArrayList) queryVecData.get("queryPredicatesUris");
+//                if(true){
+//                    for (int i = 0; i < qpu.size(); i++) {
+//                        HashMap<String,String> temp = (HashMap<String, String>) qpu.get(i);
+//                        tpf_card_queries.put(temp.get("sampling_query_id"),temp.get("sampling_query"));
+//                        String fileTFPName = extract_tpf_dir.concat("/").concat(Hashing.md5().hashString(temp.get("sampling_query_id")).toString());
+//                        BufferedWriter br = new BufferedWriter(new FileWriter(fileTFPName));
+//                        br.write(temp.get("sampling_query"));
+//                        br.close();
+//                    }
+//                }
+
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
@@ -130,7 +116,7 @@ public class DeepSetFeatureExtractor {
         vectorHeader.add("id");
         vectorHeader.addAll(featuresArray);
         vectorHeader.add("cardinality");
-        produceCsvArrayVectors(vectorHeader, vectors, output, output_delimiter,urlTFPMap);
+        produceCsvArrayVectors(vectorHeader, vectors, output, output_delimiter, urlTFPMap);
         return vectors;
     }
 
@@ -138,15 +124,16 @@ public class DeepSetFeatureExtractor {
     /**
      * Retrieve vectors for DeepSet architecture processing in parallel
      *
-     * @param urlQueries Url for queries file.
-     * @param output Url for output file.
-     * @param namespaces Url for Sparql prefixes file.
-     * @param length Length of queries to get from the csv queries file.
-     * @param cores The count of cores to use in parallel process.
+     * @param urlQueries       Url for queries file.
+     * @param output           Url for output file.
+     * @param namespaces       Url for Sparql prefixes file.
+     * @param length           Length of queries to get from the csv queries file.
+     * @param cores            The count of cores to use in parallel process.
      * @param output_delimiter Delimiter for csv file column.
+     * @param input_delimiter  Delimiter for csv file column.
      * @return ArrayList with Map of queries data generated, see @{@link QueryFeatureExtractor}
      */
-    public static ArrayList<Map<String, Object>> getArrayFeaturesVectorParallel(String urlQueries, String output, String sets, String namespaces, int length, int cores, String output_delimiter,String urlTFPMap) {
+    public ArrayList<Map<String, Object>> getArrayFeaturesVectorParallel(String urlQueries, String output, String sets, String namespaces, int length, int cores, String output_delimiter, String input_delimiter, String urlTFPMap) {
 
         model = SparqlUtils.getNamespacesDBPed(namespaces);
         ArrayList<String> featuresArray = new ArrayList<>();
@@ -159,28 +146,29 @@ public class DeepSetFeatureExtractor {
                 }
             }
         }
-        ArrayList<ArrayList<String>> featInQueryList = getArrayQueriesMetaFromCsv(urlQueries, true, 1, 0, 8, length);
+        ArrayList<ArrayList<String>> featInQueryList = this.getArrayQueriesMetaFromCsv(urlQueries, true, input_delimiter, 1, 0, 8, length);
         ForkJoinPool pool = new ForkJoinPool();
 
-        RecursiveDeepSetFeaturizeAction task = new RecursiveDeepSetFeaturizeAction(featInQueryList, featuresArray, cores, output,output_delimiter,urlTFPMap, 0, featInQueryList.size());
+        RecursiveDeepSetFeaturizeAction task = new RecursiveDeepSetFeaturizeAction(featInQueryList, featuresArray, cores, output, output_delimiter, urlTFPMap, 0, featInQueryList.size());
         return pool.invoke(task);
     }
 
     /**
      * Create a csv with array data passed as parameters.
-     * @param headers {@link ArrayList} With header for output file to generate
-     * @param list  Queries data list.
-     * @param filepath Output file path.
-     * @param indexStart Index start tuple for build the output filename with de format filename_indexStart_indexLast.csv
-     * @param indexLast Index last tuple for build the output filename with de format filename_indexStart_indexLast.csv
+     *
+     * @param headers          {@link ArrayList} With header for output file to generate
+     * @param list             Queries data list.
+     * @param filepath         Output file path.
+     * @param indexStart       Index start tupled for build the output filename with de format filename_indexStart_indexLast.csv
+     * @param indexLast        Index last tuple for build the output filename with de format filename_indexStart_indexLast.csv
      * @param output_delimiter Delimiter for csv data columns.
      */
     public static void produceCsvArrayVectors(ArrayList<String> headers, ArrayList<Map<String, Object>> list, String filepath, int indexStart, int indexLast, String output_delimiter, String fileTpf) {
-        String extension = filepath.substring(filepath.length()-4);
+        String extension = filepath.substring(filepath.length() - 4);
         produceCsvArrayVectors(
                 headers,
                 list,
-                filepath.substring(0,filepath.length()-4).concat(String.valueOf(indexStart)).concat("_").concat(String.valueOf(indexLast)).concat(extension),
+                filepath.substring(0, filepath.length() - 4).concat(String.valueOf(indexStart)).concat("_").concat(String.valueOf(indexLast)).concat(extension),
                 output_delimiter,
                 fileTpf
         );
@@ -188,12 +176,13 @@ public class DeepSetFeatureExtractor {
 
     /**
      * Create a csv with array data passed as parameters.
-     * @param headers {@link ArrayList} With header for output file to generate
-     * @param list  Queries data list.
-     * @param filepath Output file path.
+     *
+     * @param headers          {@link ArrayList} With header for output file to generate
+     * @param list             Queries data list.
+     * @param filepath         Output file path.
      * @param output_delimiter Delimiter for csv data columns.
      */
-    public static void produceCsvArrayVectors(ArrayList<String> headers, ArrayList<Map<String, Object>> list, String filepath, String output_delimiter,String urlTFPMap) {
+    public static void produceCsvArrayVectors(ArrayList<String> headers, ArrayList<Map<String, Object>> list, String filepath, String output_delimiter, String urlTFPMap) {
         BufferedWriter br;
         BufferedWriter brpred_uri;
         try {
@@ -209,7 +198,7 @@ public class DeepSetFeatureExtractor {
             HashMap<String, String> namespases = SparqlUtils.getNamespacesStr("/home/daniel/Documentos/Web_Semantica/Work/Sparql2vec/prefixes.txt");
             HashMap<String, Integer> tpfCardinalities = new HashMap<>();
             if (!urlTFPMap.equals("")) {
-                tpfCardinalities = SparqlUtils.readQueryTPFSampling(urlTFPMap);
+                tpfCardinalities = SparqlUtils.readQueryTPFSampling(urlTFPMap,'\t');
             }
             String ENDPOINT = "https://dbpedia.org/sparql";
             int count = 0;
@@ -243,16 +232,16 @@ public class DeepSetFeatureExtractor {
                         case "joins_v1": {
                             ArrayList<ArrayList> qTables = (ArrayList<ArrayList>) queryData.get("queryJoinsV1Vec");
                             if (qTables.size() > 0) {
-                                try{
-                                for (ArrayList<String> elementColOpCard : qTables) {
-                                    sb.append(elementColOpCard.get(0));
-                                    sb.append(",");
-                                    sb.append(elementColOpCard.get(1));
-                                    sb.append(",");
-                                    sb.append(elementColOpCard.get(2));
-                                    sb.append(",");
-                                }
-                                }catch (Exception ex){
+                                try {
+                                    for (ArrayList<String> elementColOpCard : qTables) {
+                                        sb.append(elementColOpCard.get(0));
+                                        sb.append(",");
+                                        sb.append(elementColOpCard.get(1));
+                                        sb.append(",");
+                                        sb.append(elementColOpCard.get(2));
+                                        sb.append(",");
+                                    }
+                                } catch (Exception ex) {
                                     ex.printStackTrace();
                                     System.out.println(qTables);
                                 }
@@ -272,8 +261,7 @@ public class DeepSetFeatureExtractor {
                                     sb.append(element.get("value"));
                                     sb.append(",");
                                 }
-                            }
-                            else {
+                            } else {
                                 sb.append("EMPTY_VALUE");
                             }
                             break;
@@ -306,21 +294,19 @@ public class DeepSetFeatureExtractor {
                                     sb.append(element.get("object"));
                                     sb.append(",");
                                     String hash = String.valueOf(element.get("sampling_query_id"));
-
-                                    if(tpfCardinalities.get(hash) != null) {
+                                    hash = Hashing.md5().hashString(hash).toString();
+                                    if (tpfCardinalities.get(hash) != null) {
                                         int card = tpfCardinalities.get(hash);
                                         sb.append(card);
                                         sb.append(",");
-                                    }
-                                    else {
+                                    } else {
                                         String query = String.valueOf(element.get("sampling_query"));
                                         int result = 0;
-                                        try
-                                        {
-                                            result = DBPediaUtils.execQuery(query, ENDPOINT,  namespases);}
-                                        catch (Exception ex) {
-                                          ex.printStackTrace();
-                                          System.out.println("Query failed: ".concat(hash));
+                                        try {
+                                            result = DBPediaUtils.execQuery(query, ENDPOINT, namespases);
+                                        } catch (Exception ex) {
+                                            ex.printStackTrace();
+                                            System.out.println("Query failed: ".concat(hash));
                                         }
 
                                         sb.append(result);
@@ -345,7 +331,7 @@ public class DeepSetFeatureExtractor {
                 }
                 sb.append("\n");
                 count++;
-                if(count % 1000 == 0){
+                if (count % 1000 == 0) {
                     brpred_uri = new BufferedWriter(new FileWriter(filepath.concat(".preduri.").concat(String.valueOf(count)).concat(".txt")));
                     brpred_uri.write(sbbrpred_uri.toString());
                     brpred_uri.close();

@@ -209,27 +209,27 @@ public class AlgebraFeatureExtractor {
 
             public void visit(OpGroup opGroup) {
 
-                //System.out.println("group ");
+                System.out.println("group ");
                 features[featureIndex.get("group")] += 1.0;
 
             }
 
             public void visit(OpAssign opAssign) {
 
-                //System.out.println("assign ");
+                System.out.println("assign ");
                 features[featureIndex.get("assign")] += 1.0;
 
             }
 
             public void visit(OpSequence opSequence) {
 
-                //System.out.println("sequence ");
+                System.out.println("sequence ");
                 features[featureIndex.get("sequence")] += 1.0;
 
             }
 
             public void visit(OpConditional opConditional) {
-                //System.out.println("conditional");
+                System.out.println("conditional");
             }
 
 
@@ -474,38 +474,38 @@ public class AlgebraFeatureExtractor {
             if (!visited.get(arg0.getSubOp())) walkAlgebraTreeRecursive(arg0.getSubOp(), level + 1);
         }
 		
-		/*if(op instanceof OpNull) {
+		if(op instanceof OpNull) {
 
 		}
-		
+
 		if(op instanceof OpTable) {
 
 		}
-		
+
 		if(op instanceof OpPath) {
 
 		}
-		
+
 		if(op instanceof OpQuad) {
 
 		}
-		
+
 		if(op instanceof OpTriple) {
-			
-			
+
+
 		}
-		
+
 		if(op instanceof OpQuadBlock) {
 
 		}
-		
+
 		if(op instanceof OpQuadPattern) {
 
 		}
-		
+
 		if(op instanceof OpBGP) {
 
-		}*/
+		}
     }
 
     private void walkAlgebraTreeOld(Op op, final int level) {
@@ -685,7 +685,7 @@ public class AlgebraFeatureExtractor {
             }
 
             public void visit(OpBGP arg0) {
-
+                System.out.println(arg0.toString());
             }
         });
     }
@@ -696,7 +696,7 @@ public class AlgebraFeatureExtractor {
         AlgebraFeatureExtractor fe = new AlgebraFeatureExtractor(headers);
 
         fe.setDebug(true);
-        String queryStr = "PREFIX foaf:       <http://xmlns.com/foaf/0.1/> SELECT DISTINCT ?name ?nick WHERE { ?x foaf:mbox <mailto:person@server.com> . ?x foaf:name ?name  OPTIONAL { ?x foaf:nick ?nick }}";
+        String queryStr = "PREFIX foaf:       <http://xmlns.com/foaf/0.1/> SELECT DISTINCT ?x ?name  WHERE { {?x foaf:mbox <mailto:person@server.com> }. {?x foaf:name ?name .}}";
         System.out.println(queryStr);
         double[] features = fe.extractFeatures(queryStr);
 

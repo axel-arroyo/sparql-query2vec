@@ -11,11 +11,11 @@ import com.hp.hpl.jena.sparql.syntax.*;
 import java.util.*;
 
 public class RecurrentQueryFeatureExtractor {
-    private ArrayList<String> queryPredicates;
-    private ArrayList<HashMap<String, String>> querytpfs;
-    private String query;
-    private String id;
-    private String execTime;
+    protected ArrayList<String> queryPredicates;
+    protected ArrayList<HashMap<String, String>> querytpfs;
+    protected String query;
+    protected String id;
+    protected String execTime;
 
     public static String VAR_PRED_VAR = "1";
     public static String VAR_PRED_LIT = "2";
@@ -139,7 +139,7 @@ public class RecurrentQueryFeatureExtractor {
         return result;
     }
 
-    private void processTpfWithPreds(Node subject, Node predicate, Node object, String structure) {
+    void processTpfWithPreds(Node subject, Node predicate, Node object, String structure) {
         if(!this.queryPredicates.contains(predicate.getURI())) {
             this.queryPredicates.add(predicate.getURI());
         }
@@ -148,7 +148,7 @@ public class RecurrentQueryFeatureExtractor {
         pred.put("structure", structure);
         querytpfs.add(pred);
     }
-    private void processNoPreds(Node subject, Node predicate, Node object, String structure) {
+    void processNoPreds(Node subject, Node predicate, Node object, String structure) {
 
         HashMap<String, String> pred = new HashMap<>();
         pred.put("predicate", "NONE");
