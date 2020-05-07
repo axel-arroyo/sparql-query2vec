@@ -1,22 +1,25 @@
 package semanticweb.sparql.preprocess;
 
+import com.google.common.collect.ImmutableMap;
 import com.hp.hpl.jena.datatypes.xsd.impl.XSDBaseNumericType;
 import com.hp.hpl.jena.graph.Node;
+import com.hp.hpl.jena.graph.Node_Variable;
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.query.Query;
 import com.hp.hpl.jena.query.QueryFactory;
 import com.hp.hpl.jena.sparql.algebra.Algebra;
 import com.hp.hpl.jena.sparql.algebra.Op;
 import com.hp.hpl.jena.sparql.core.TriplePath;
+import com.hp.hpl.jena.sparql.expr.E_IsNumeric;
 import com.hp.hpl.jena.sparql.expr.Expr;
-import com.hp.hpl.jena.sparql.expr.ExprFunction;
 import com.hp.hpl.jena.sparql.expr.ExprFunction2;
+import com.hp.hpl.jena.sparql.expr.ExprVar;
+import com.hp.hpl.jena.sparql.expr.aggregate.*;
 import com.hp.hpl.jena.sparql.expr.nodevalue.NodeValueInteger;
 import com.hp.hpl.jena.sparql.syntax.*;
-import semanticweb.sparql.Operator;
+import semanticweb.sparql.utils.PredHistogram;
 
 import java.util.*;
-
 public class RLQueryFeatureExtractor {
     private ArrayList<String> queryTables;
     private ArrayList<String> queryVariables;
@@ -25,14 +28,19 @@ public class RLQueryFeatureExtractor {
     private ArrayList<HashMap<String, Object>> queryPredicatesUris;
     private String query;
     private String id;
+    private String execTime;
     private String cardinality;
-    private HashMap<String,String> predQueryToHist;
+    private HashMap<String, PredHistogram> predQueryToHist;
     public static int TWO_INCOMING_PREDICATES = 1;
     public static int TWO_OUTGOING_PREDS = 2;
     public static int ONE_WAY_TWO_PREDS = 3;
     public static int TWO_OUTGOING_PRED_VAR_URI = 4;
     public static int TWO_INCOMING_PREDS_VAR_LITERAL = 5;
-    private HashMap<String, ExprFunction> filters;
+
+    public static Map<String,Integer> Operator =    ImmutableMap.of( "<",-2,"<=",-1,"=",0, ">=",1,">",2);
+    public static Map<Integer,String> OperatorInv = ImmutableMap.of( -2,"<",-1,"<=",0,"=",1, ">=",2,">");
+
+    private HashMap<String, HashMap<String,Object>> filters;
     /**
      * Constructor for query String
      * @param query
@@ -55,7 +63,7 @@ public class RLQueryFeatureExtractor {
     public RLQueryFeatureExtractor(ArrayList<String> queryArr) {
         this.id = queryArr.get(0);
         this.query = queryArr.get(1);
-        this.cardinality = queryArr.get(2);
+        this.execTime = queryArr.get(2);
         this.queryTables = new ArrayList<>();
         this.queryVariables = new ArrayList<>();
         this.queryJoinsNodes = new HashMap<>();
@@ -83,7 +91,7 @@ public class RLQueryFeatureExtractor {
 
         Element e = query.getQueryPattern();
         HashMap<String, TriplePath> tpf = new HashMap<>();
-        HashMap<String, ExprFunction> filters = new HashMap<>();
+        HashMap<String, HashMap<String, Object>> filters = new HashMap<>();
         // AlgebraFeatureExtractor.getFeaturesDeepSet(op);
         // This will walk through all parts of the query
         ElementWalker.walk(e,
@@ -102,11 +110,22 @@ public class RLQueryFeatureExtractor {
                             ExprFunction2 exp = (ExprFunction2) el.getExpr();
                             Expr arg1 = exp.getArg1();
                             Expr arg2 = exp.getArg2();
+                            HashMap<String,Object> expFilter = new HashMap<>();
                             if (arg1.isVariable() && ((NodeValueInteger) arg2).isNumber() ) {
-                                filters.put(arg1.getVarName(), exp);
+                                expFilter.put("operator", exp.getOpName());
+                                expFilter.put("value", ((NodeValueInteger) arg2).getDouble());
+                                filters.put(arg1.getVarName(), expFilter);
                             }
                             else if(arg2.isVariable() && ((NodeValueInteger) arg1).isNumber()) {
-                                filters.put(arg2.getVarName(), exp);
+
+                                String operator = exp.getOpName();
+                                // invert operator
+                                if(Operator.containsKey(operator)){
+                                    operator = OperatorInv.get(Operator.get(operator) * -1);
+                                }
+                                expFilter.put("operator", operator);
+                                expFilter.put("value", ((NodeValueInteger) arg1).getDouble());
+                                filters.put(arg2.getVarName(), expFilter);
                             }
                         }
                         catch (Exception ex){
@@ -134,6 +153,9 @@ public class RLQueryFeatureExtractor {
             Node predicate = t.getPredicate();
 
             //           VAR                       URI                 VAR
+            if(subject == null || predicate == null  || object == null){
+                continue;
+            }
             if (subject.isVariable() && predicate.isURI() && object.isVariable()) {
                 //if not int table list add to.
                 this.processVarPredVar(subject, predicate, object);
@@ -179,11 +201,15 @@ public class RLQueryFeatureExtractor {
         result.put("queryPredicates", this.queryPredicates);
         result.put("queryPredicatesUris", this.queryPredicatesUris);
         result.put("queryJoinsVec", queryJoinsVec);
+        result.put("queriesToHist", this.predQueryToHist);
         if (this.id != null) {
             result.put("id", this.id);
         }
         if (this.cardinality != null) {
             result.put("cardinality", this.cardinality);
+        }
+        if (this.cardinality != null) {
+            result.put("execTime", this.execTime);
         }
         return result;
     }
@@ -295,20 +321,10 @@ public class RLQueryFeatureExtractor {
         if (!this.queryVariables.contains(object.getName())) {
             this.queryVariables.add(object.getName());
         }
-        HashMap<String, Object> pred = new HashMap<>();
-        pred.put("col", predicate.getURI());
-        pred.put("operator", Operator.EQUAL);
-        pred.put("value", "ALL");
-
-        this.queryPredicates.add(pred);
+        HashMap<String, Object> pred = this.createPredMap(subject, predicate, object, "ALL",true,true);
         this.processTPFJoins(subject, predicate, object);
-        if (this.filters.containsKey(subject.getName())) {
-            ExprFunction2 exprFilter = (ExprFunction2) this.filters.get(subject.getName());
-            String queryFilter = this.getQueryPredUriByVar(subject,predicate,object,subject.getName(), exprFilter);
-            predQueryToHist.put(predicate.getURI(),queryFilter);
-            pred.put("operator",exprFilter.getOpName());
-            pred.put("value",exprFilter.getOpName());
-        }
+        this.queryPredicates.add(pred);
+
     }
 
     /**
@@ -327,13 +343,14 @@ public class RLQueryFeatureExtractor {
             queryVariables.add(subject.getName());
         }
         //add Literal object to list
-        HashMap<String, Object> pred = new HashMap<>();
-        pred.put("col", predicate.getURI());
-        pred.put("operator", Operator.EQUAL);
-        pred.put("value", object.getLiteralValue());
-        this.queryPredicates.add(pred);
+        HashMap<String, Object> pred = this.createPredMap(subject, predicate, object, object.getLiteralValue(),true,false);
+//        pred.put("col", predicate.getURI());
+//        pred.put("operator", "=");
+//        pred.put("value", object.getLiteralValue());
         //Todo change if needed and diferent method for literals
         this.processTPFJoinsVar_URI(subject, predicate, object);
+        this.queryPredicates.add(pred);
+
     }
 
     /**
@@ -352,15 +369,79 @@ public class RLQueryFeatureExtractor {
             queryVariables.add(subject.getName());
         }
         //add Literal object to list
-        HashMap<String, Object> pred = new HashMap<>();
-        pred.put("col", predicate.getURI());
-        pred.put("operator", Operator.EQUAL);
-        pred.put("value", object.getLiteralValue());
+        HashMap<String, Object> pred = this.createPredMap(subject, predicate, object, object.getLiteralValue(),true,false);
+        String queryFilter = this.getQueryPredNumericByVar(
+                new Node_Variable("sub"),
+                predicate,
+                new Node_Variable("obj"),
+                "obj");
+//        HashMap<String,String> qFilterDict = new HashMap<>();
+//        qFilterDict.put("type","numeric");
+//        qFilterDict.put("on","obj");
+//        qFilterDict.put("query", queryFilter);
+//        predQueryToHist.put(predicate.getURI(),qFilterDict);
+        addQueryFilter("numeric","obj", queryFilter, predicate.getURI());
+
         queryPredicates.add(pred);
         //Todo change if needed and diferent method for literals
         this.processTPFJoinsVar_URI(subject, predicate, object);
     }
 
+    /**
+     *
+     * @param subject
+     * @param predicate
+     * @param object
+     * @param Initvalue
+     * @param filterInSub
+     * @param filterInObj
+     * @return
+     */
+    private HashMap<String,Object> createPredMap(Node subject, Node predicate, Node object, Object Initvalue, boolean filterInSub, boolean filterInObj) {
+        HashMap<String, Object> pred = new HashMap<>();
+        pred.put("col", predicate.getURI());
+        pred.put("operator", "=");
+        pred.put("value", Initvalue);
+
+        //Agregando key con el lugar donde se ejecuta el filtro para luego dividir los histogramas si son en el sujeto u objeto.
+        if(filterInSub){
+            pred.put("on",  "sub");
+        }
+        else if(filterInObj) {
+            pred.put("on",  "obj");
+        }
+
+        // If variable in subject or object ar in query filters restrict values an change operator by operator and value inside filter.
+        if (filterInSub && this.filters.containsKey(subject.getName())) {
+            HashMap<String,Object> exprFilter = this.filters.get(subject.getName());
+            String queryFilter = this.getQueryPredNumericByVar(new Node_Variable("sub"), predicate, new Node_Variable("obj"), "sub");
+//            HashMap<String,String> qFilterDict = new HashMap<>();
+//            qFilterDict.put("type","numeric");
+//            qFilterDict.put("on","sub");
+//            qFilterDict.put("query", queryFilter);
+//            predQueryToHist.put(predicate.getURI(),qFilterDict);
+            addQueryFilter("numeric","sub", queryFilter, predicate.getURI());
+
+            pred.put("operator", exprFilter.get("operator"));
+            pred.put("value", Integer.parseInt((String) exprFilter.get("value")));
+            pred.put("on",  exprFilter.get("on"));
+        }
+        else if (filterInObj && this.filters.containsKey(object.getName()) ) {
+            HashMap<String,Object> exprFilter = this.filters.get(object.getName());
+            String queryFilter = this.getQueryPredNumericByVar(new Node_Variable("sub"), predicate, new Node_Variable("obj"), "obj");
+//            HashMap<String,String> qFilterDict = new HashMap<>();
+//            qFilterDict.put("type","numeric");
+//            qFilterDict.put("on","obj");
+//            qFilterDict.put("query", queryFilter);
+//            predQueryToHist.put(predicate.getURI(), qFilterDict);
+            addQueryFilter("numeric","obj", queryFilter, predicate.getURI());
+
+            pred.put("operator", exprFilter.get("operator"));
+            pred.put("value",  exprFilter.get("value"));
+            pred.put("on",  exprFilter.get("on"));
+        }
+        return pred;
+    }
     /**
      * Logic for subject literal, predicate uri, object var literal like (29  foaf:age, var )
      *
@@ -377,10 +458,18 @@ public class RLQueryFeatureExtractor {
             queryVariables.add(object.getName());
         }
         //add Literal object to list
-        HashMap<String, Object> pred = new HashMap<>();
-        pred.put("col", predicate.getURI());
-        pred.put("operator", Operator.EQUAL);
-        pred.put("value", subject.getLiteralValue());
+        HashMap<String, Object> pred =  this.createPredMap(subject, predicate, object, subject.getLiteralValue(),false,true);
+        String queryFilter = this.getQueryPredNumericByVar(
+                new Node_Variable("sub"),
+                predicate,
+                new Node_Variable("obj"),
+                "sub");
+//        HashMap<String,String> qFilterDict = new HashMap<>();
+//        qFilterDict.put("type", "numeric");
+//        qFilterDict.put("on", "sub");
+//        qFilterDict.put("query", queryFilter);
+//        predQueryToHist.put(predicate.getURI(),qFilterDict);
+        addQueryFilter("numeric","sub", queryFilter, predicate.getURI());
         queryPredicates.add(pred);
     }
     private String getQueryPredUri(String triple){
@@ -388,31 +477,74 @@ public class RLQueryFeatureExtractor {
         String end = "\n }";
         return head.concat(triple).concat(end);
     }
-    private String getQueryPredUriByVar(Node s, Node p, Node o, String var, ExprFunction2 exprFilter){
-
-//        String head = "SELECT  (".concat(var).concat(" AS ?var) WHERE { \n");
-//        String end = "\n }";
-//        String queryStr =  head.concat(triple).concat(end);
-//        Query query = QueryFactory.create(queryStr);
-//
-//        // Generate algebra
-//        Op op = Algebra.compile(query);
-//        op = Algebra.optimize(op);
-//        query.setQueryPattern();
+    private void addQueryFilter(String type, String on, String query, String predicate){
+        if (predQueryToHist.containsKey(predicate)){
+            PredHistogram predHist = predQueryToHist.get(predicate);
+            predHist.setQuery(on, type, query);
+            predQueryToHist.put(predicate, predHist);
+        }
+        else {
+            PredHistogram predHist = new PredHistogram(type, on, query, predicate);
+            predQueryToHist.put(predicate,predHist);
+        }
+    }
+    /**
+     * Create a String with query
+     * @param s Node Subject
+     * @param p Node Predicate
+     * @param o Node Object
+     * @param var
+     * @return
+     */
+    private String getQueryPredUriByVar(Node s, Node p, Node o, String var){
         ElementTriplesBlock block = new ElementTriplesBlock(); // Make a BGP
         Triple pattern = Triple.create(s, p, o);
         block.addTriple(pattern);                              // Add our pattern match
-        ElementFilter filter = new ElementFilter(exprFilter);           // Make a filter matching the expression
         ElementGroup body = new ElementGroup();                // Group our pattern match and filter
         body.addElement(block);
-        body.addElement(filter);
-
         Query q = QueryFactory.make();
         q.setQueryPattern(body);                               // Set the body of the query to our group
         q.setQuerySelectType();                                // Make it a select query
         q.addResultVar(var);
+        q.setLimit(1000);
         return q.toString();
     }
+    /**
+     * Create a String with query
+     * @param s
+     * @param p
+     * @param o
+     * @param var
+     * @return
+     */
+    private String getQueryPredNumericByVar(Node s, Node p, Node o, String var){
+        ElementTriplesBlock block = new ElementTriplesBlock(); // Make a BGP
+        Triple pattern = Triple.create(s, p, o);
+        block.addTriple(pattern);                              // Add our pattern match
+        ElementGroup body = new ElementGroup();                // Group our pattern match and filter
+        body.addElement(block);
+        Query q = QueryFactory.make();
+        //Adding filter para valores numericos
+        Expr e = new E_IsNumeric(new ExprVar(var));
+        ElementFilter filter = new ElementFilter(e);           // Make a filter matching the expression
+        body.addElement(filter);
+
+        q.setQueryPattern(body);                               // Set the body of the query to our group
+        q.setQuerySelectType();                               // Make it a select query
+        //Adding min max agregators over var
+        AggCountVarDistinct count = new AggCountVarDistinct(new ExprVar(var));
+        AggMax max = new AggMax(new ExprVar(var));
+        AggMin min = new AggMin(new ExprVar(var));
+        Expr maxExpr =  q.allocAggregate(max);
+        Expr minExpr =  q.allocAggregate(min);
+        Expr distExpr =  q.allocAggregate(count);
+        q.addResultVar("max", maxExpr);
+        q.addResultVar("min", minExpr);
+        q.addResultVar("distinct", distExpr);
+        q.setLimit(1000);
+        return q.toString();
+    }
+
     /**var
      * Logic for subject var, predicate uri, object int literal like (Var1.rdf:type, foaf:Person )
      *
@@ -427,23 +559,15 @@ public class RLQueryFeatureExtractor {
         if (!this.queryVariables.contains(subject.getName())) {
             this.queryVariables.add(subject.getName());
         }
-        HashMap<String, Object> pred = new HashMap<>();
-        pred.put("col", predicate.getURI());
-        pred.put("operator", Operator.EQUAL);
-        pred.put("value", object.getURI());
-        String hash = String.valueOf(pred.get("col")).concat(String.valueOf(pred.get("operator"))).concat(String.valueOf(pred.get("value")));
-        pred.put("sampling_query_id", hash);
-        pred.put("sampling_query", getQueryPredUri(
-                "?var "
-                        .concat("<")
-                        .concat(String.valueOf(pred.get("col")))
-                        .concat(">")
-                        .concat(" ")
-                        .concat("<")
-                        .concat(String.valueOf(pred.get("value")))
-                        .concat(">")
-                )
-        );
+        HashMap<String, Object> pred = this.createPredMap(subject, predicate, object, object.getURI(),true,false);
+        String queryFilter = this.getQueryPredUriByVar(new Node_Variable("sub"), predicate, new Node_Variable("obj"), "obj");
+//        HashMap<String,String> qFilterDict = new HashMap<>();
+//        qFilterDict.put("type","uri");
+//        qFilterDict.put("on","obj");
+//        qFilterDict.put("query", queryFilter);
+//        predQueryToHist.put(predicate.getURI(),qFilterDict);
+        addQueryFilter("uri","obj", queryFilter, predicate.getURI());
+
         this.queryPredicatesUris.add(pred);
         this.processTPFJoinsVar_URI(subject, predicate, object);
     }
@@ -463,25 +587,14 @@ public class RLQueryFeatureExtractor {
         if (!this.queryVariables.contains(object.getName())) {
             this.queryVariables.add(object.getName());
         }
-        HashMap<String, Object> pred = new HashMap<>();
-        pred.put("col", predicate.getURI());
-        pred.put("operator", Operator.EQUAL);
-        pred.put("value", subject.getURI());
-
-        String hash = String.valueOf(pred.get("col")).concat(String.valueOf(pred.get("operator"))).concat(String.valueOf(pred.get("value")));
-        pred.put("sampling_query_id", hash);
-
-        pred.put("sampling_query", getQueryPredUri(
-                "<"
-                        .concat(String.valueOf(pred.get("value")))
-                        .concat(">")
-                        .concat(" ")
-                        .concat("<")
-                        .concat(String.valueOf(pred.get("col")))
-                        .concat(">")
-                        .concat(" ?var")
-                        .concat( " . ")
-        ));
+        HashMap<String, Object> pred =  this.createPredMap(subject, predicate, object, subject.getURI(),false, true);
+        String queryFilter = this.getQueryPredUriByVar(new Node_Variable("sub"), predicate, new Node_Variable("obj"), "sub");
+//        HashMap<String,String> qFilterDict = new HashMap<>();
+//        qFilterDict.put("type","uri");
+//        qFilterDict.put("on","sub");
+//        qFilterDict.put("query", queryFilter);
+//        predQueryToHist.put(predicate.getURI(),qFilterDict);
+        addQueryFilter("uri","sub", queryFilter, predicate.getURI());
         this.queryPredicatesUris.add(pred);
     }
 
@@ -642,8 +755,16 @@ public class RLQueryFeatureExtractor {
             System.out.println("###################################################");
             RLQueryFeatureExtractor qfe = new RLQueryFeatureExtractor(query);
             Map<String, Object> data = qfe.getProcessedData();
-            System.out.println(data.get("queryJoinsVec"));
+            System.out.println(data);
             System.out.println("###################################################");
         }
+
+//        String a = "select (MIN(?val) as ?min) (MAX(?val) as ?max) where {\n" +
+//                "  ?numeric <http://dbpedia.org/ontology/apoapsis>  ?val }";
+//        Query query = QueryFactory.create(a);
+//        // Generate algebra
+//        Op op = Algebra.compile(query);
+//        op = Algebra.optimize(op);
+
     }
 }

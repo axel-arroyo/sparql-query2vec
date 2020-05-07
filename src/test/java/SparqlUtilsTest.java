@@ -7,7 +7,6 @@ import com.hp.hpl.jena.sparql.algebra.Algebra;
 import com.hp.hpl.jena.sparql.algebra.Op;
 import com.hp.hpl.jena.sparql.core.TriplePath;
 import com.hp.hpl.jena.sparql.syntax.*;
-import com.hp.hpl.jena.tdb.store.Hash;
 import org.junit.jupiter.api.Test;
 import semanticweb.sparql.Operator;
 import semanticweb.sparql.QDistanceHungarian;

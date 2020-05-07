@@ -48,6 +48,8 @@ public class Endpoint {
             int cores =  map.get("--cores")  != null ? Integer.parseInt(map.get("--cores")) : 0;
             int length = map.get("--length") != null ? Integer.parseInt(map.get("--length")): 0;
             String output_delimiter = map.get("--output-delimiter") != null ? map.get("--output-delimiter"): ",";
+            //Delimitador de elementos dentro de una columna, la coma no es buena debido a que existen uris con coma.
+            String output_element_delimiter = map.get("--output-element-delimiter") != null ? map.get("--output-element-delimiter"): "ᶷ";
             String input_delimiter = map.get("--input-delimiter") != null ? map.get("--input-delimiter"): "~";
             int execTimeColumn =  map.get("--execTimeColumn")  != null ? Integer.parseInt(map.get("--execTimeColumn")) : 7;
 
@@ -98,7 +100,12 @@ public class Endpoint {
                 }
                 case "rlearning": {
                     ReinforcementLearningExtractor rpfv = new ReinforcementLearningExtractor();
-                    rpfv.getArrayFeaturesVector(params[0], params[1], params[2], queryColumn, idColumn, execTimeColumn, length, output_delimiter, input_delimiter);
+                    rpfv.getArrayFeaturesVector(params[0], params[1], params[2], queryColumn, idColumn, execTimeColumn, length, output_delimiter, input_delimiter, output_element_delimiter);
+                    break;
+                }
+                case "execute-sampling-hist": {
+                    ReinforcementLearningExtractor rpfv = new ReinforcementLearningExtractor();
+                    rpfv.executeSamplingHist(params[0], params[1], output_delimiter, input_delimiter, output_element_delimiter);
                     break;
                 }
                 default: {

@@ -63,7 +63,29 @@ public class SparqlUtils {
 		}
 //		System.out.println(map.toString());
     }
-
+	/**
+	 * Retrieve array list of csv file, using delimiter  column param
+	 * @param url
+	 * @param delimiterCol
+	 * @return
+	 */
+	public static ArrayList getArrayFromCsvFile(String url, String delimiterCol) {
+		BufferedReader csvReader;
+		String row;
+		ArrayList arrayList = new ArrayList();
+		try {
+			csvReader = new BufferedReader(new FileReader(url));
+			while ((row = csvReader.readLine()) != null) {
+				String[] data = row.split(delimiterCol);
+				arrayList.add(data);
+			}
+			csvReader.close();
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+		}
+		return arrayList;
+	}
 	/**
 	 * Retrieve array list of csv file, using delimiter  column param
 	 * @param url
