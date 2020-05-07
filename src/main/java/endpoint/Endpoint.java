@@ -25,7 +25,7 @@ public class Endpoint {
         }
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args){
         makeMap(args);
 
         //Getting parameters
@@ -34,6 +34,18 @@ public class Endpoint {
             System.out.println("java -jar file.jar kmedoids /path/to/input.csv /path/to/output.csv /path/to/ids_time.csv #-of-centroids");
             System.out.println("java -jar file.jar edit-distance /path/to/input.csv /path/to/output.csv /path/to/prefixes #-of-cores");
             System.out.println("java -jar file.jar deepset-features /path/to/input.csv /path/to/output.csv tables,joins,predicates /path/to/prefixes [--cores=numOfCores] [--length=numOfTuples] [--output-delimiter=symbolToDelimitColumns]");
+            System.out.println("java -jar file.jar rlearning\n" +
+                    "/path/to/input.csv\n" +
+                    "/path/to/output.csv\n" +
+                    "/path/to/prefix_file\n" +
+                    "[--input-delimiter=symbolToDelimitColumns]\n" +
+                    "[--output-delimiter=symbolToDelimitColumns]");
+            System.out.println("java -jar file.jar execute-sampling-hist\n" +
+                    "/path/to/input.csv\n" +
+                    "/path/to/output.csv\n" +
+                    "[--input-delimiter=symbolToDelimitColumns]\n" +
+                    "[--output-element-delimiter=symbolToDel elem inside columns]\n" +
+                    "[--output-delimiter=symbolToDelimitColumns]");
             return;
         }
         String[] params = new String[args.length-1];
