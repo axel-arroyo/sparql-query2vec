@@ -53,6 +53,7 @@ public class Endpoint {
         try {
             String task = args[0];
             //Define parameters from args
+            int medoids =  map.get("--medoids")  != null ? Integer.parseInt(map.get("--medoids")) : 25;
             String configFile =  map.get("--config-file")  != null ? map.get("--config-file") : "";
             String urlTFPMap =  map.get("--tpf-map-file")  != null ? map.get("--tpf-map-file") : "";
             String prefixFile =  map.get("--prefix-file")  != null ? map.get("--prefix-file") : "";
@@ -72,7 +73,7 @@ public class Endpoint {
                 case "kmedoids": {
                     System.out.println("Entering to kmedoids class");
                     KmedoidsGenerator kmedoidsGenerator = new KmedoidsGenerator();
-                    kmedoidsGenerator.proccessQueries(params, input_delimiter.toCharArray()[0], output_delimiter.toCharArray()[0]);
+                    kmedoidsGenerator.proccessQueries(params, medoids, input_delimiter, output_delimiter.toCharArray()[0]);
                     break;
                 }
                 case "edit-distance": {

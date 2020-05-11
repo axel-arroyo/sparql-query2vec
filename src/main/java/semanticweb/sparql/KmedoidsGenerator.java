@@ -11,7 +11,7 @@ import java.util.Random;
 
 public class KmedoidsGenerator {
 
-    public static double[][] getArrayFromCsvFile(String url, String delimiterCol, String delimiterRow) {
+    public static double[][] getArrayFromCsvFile(String url, String delimiterCol) {
         BufferedReader csvReader;
         String row;
         double[][] arrayList = new double[0][];
@@ -43,7 +43,7 @@ public class KmedoidsGenerator {
 
         String delimiterCol = ",";
         String delimiterRow = "\n";
-        return  getArrayFromCsvFile(url, delimiterCol, delimiterRow);
+        return  getArrayFromCsvFile(url, delimiterCol);
     }
     private RealMatrix getDataAsIndex(RealMatrix distance_matrix) {
         double[][] doubles = new double[distance_matrix.getRowDimension()][distance_matrix.getRowDimension()];
@@ -54,12 +54,12 @@ public class KmedoidsGenerator {
         }
         return  new Array2DRowRealMatrix(doubles);
     }
-    public void proccessQueries(String[] args, char input_delimiter, char output_delimiter){
+
+    public void proccessQueries(String[] args,int k, String input_delimiter, char output_delimiter){
         System.out.println("Inside");
         String input = "";
         String output = "";
         String indexesFile = "";
-        int k = 2;
         try {
             input = args[0];
         }
@@ -74,23 +74,15 @@ public class KmedoidsGenerator {
             System.out.println("You need to specify the output URL as the second parameter");
             return;
         }
-        try {
-            indexesFile = args[2];
-        }
-        catch (Exception ex) {
-            System.out.println("You need to specify the indexesFile URL as the third parameter");
-            return;
-        }
-        try {
-            if(args.length ==4)
-                k = Integer.parseInt(args[3]);
-        }
-        catch (Exception ex) {
-            System.out.println("You need to specify the k value as the fourth parameter");
-            return;
-        }
-        double[][] distances = getArrayFromCsvFile(input);
-        ArrayList<String[]> ids_time = SparqlUtils.getArrayFromCsvFile(indexesFile);
+//        try {
+//            indexesFile = args[2];
+//        }
+//        catch (Exception ex) {
+//            System.out.println("You need to specify the indexesFile URL as the third parameter");
+//            return;
+//        }
+        double[][] distances = getArrayFromCsvFile(input, input_delimiter);
+//        ArrayList<String[]> ids_time = SparqlUtils.getArrayFromCsvFile(indexesFile);
 
         double[][] doubles = new double[distances.length][distances.length];
         for (int i = 0; i < distances.length; i++) {
@@ -98,7 +90,7 @@ public class KmedoidsGenerator {
                 doubles[i][j] = i;
             }
         }
-        ArrayList<String> indexes = new ArrayList<>();
+//        ArrayList<String> indexes = new ArrayList<>();
         RealMatrix rm = MatrixUtils.createRealMatrix(distances);
 
         KmedoidsED km = new KmedoidsED(MatrixUtils.createRealMatrix(doubles),rm,k);
@@ -119,28 +111,27 @@ public class KmedoidsGenerator {
             br = new BufferedWriter(new FileWriter(output));
             //Write header
             sb.append("id");
-            sb.append(",");
-            sb.append("time");
-            sb.append(",");
+            sb.append(output_delimiter);
             for (int i = 0; i < k; i++) {
                 sb.append("pcs").append(k);
-                sb.append(",");
+                sb.append(output_delimiter);
             }
+            sb.append("time");
             sb.append("\n");
             for (int i = 0; i < distances.length; i++) {
-                if(ids_time.size() > 0){
-                    for (int j = 0; j < ids_time.get(i).length; j++) {
-                        sb.append(ids_time.get(i)[j]);
-                        sb.append(",");
-                    }
-                }
+//                if(ids_time.size() > 0){
+//                    for (int j = 0; j < ids_time.get(i).length; j++) {
+//                        sb.append(ids_time.get(i)[j]);
+//                        sb.append(output_delimiter);
+//                    }
+//                }
                 for (int j = 0; j < centroidList.size(); j++) {
 
                     int currentCentroid = centroidList.get(j);
                     double distance = distances[i][currentCentroid];
                     double similarity = 1 / (1+ distance);
                     sb.append(similarity);
-                    sb.append(",");
+                    sb.append(output_delimiter);
                 }
                 sb.append("\n");
             }

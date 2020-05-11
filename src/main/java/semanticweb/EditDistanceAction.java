@@ -31,7 +31,6 @@ public class EditDistanceAction extends RecursiveTask {
         RDFGraphMatching matcher = new RDFGraphMatching();
         StringBuilder failed_row_column = new StringBuilder();
         for (int i = indexStart; i < indexLast; i++) {
-
             try {
                 Graph Gi = (Graph) queries.get(i).get("graph");
                 for (int j = 0; j < queries.size(); j++) {
@@ -81,7 +80,7 @@ public class EditDistanceAction extends RecursiveTask {
     @Override
     protected Object compute() {
         if (recursive) {
-            computeSubMatrix(indexStart,indexLast);
+            computeSubMatrix(indexStart, indexLast);
             System.out.println("Processed range: "+indexStart+ " - "+indexLast);
         }
         else {
