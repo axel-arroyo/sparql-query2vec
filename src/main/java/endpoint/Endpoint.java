@@ -53,7 +53,9 @@ public class Endpoint {
         try {
             String task = args[0];
             //Define parameters from args
+            String configFile =  map.get("--config-file")  != null ? map.get("--config-file") : "";
             String urlTFPMap =  map.get("--tpf-map-file")  != null ? map.get("--tpf-map-file") : "";
+            String prefixFile =  map.get("--prefix-file")  != null ? map.get("--prefix-file") : "";
             int idColumn =  map.get("--idColumn")  != null ? Integer.parseInt(map.get("--idColumn")) : 0;
             int cardinalityColumn =  map.get("--cardinalityColumn")  != null ? Integer.parseInt(map.get("--cardinalityColumn")) : 8;
             int queryColumn =  map.get("--queryColumn")  != null ? Integer.parseInt(map.get("--queryColumn")) : 1;
@@ -69,15 +71,27 @@ public class Endpoint {
             switch (task){
                 case "kmedoids": {
                     System.out.println("Entering to kmedoids class");
-                    KmedoidsGenerator.main(params);
+                    KmedoidsGenerator kmedoidsGenerator = new KmedoidsGenerator();
+                    kmedoidsGenerator.proccessQueries(params, input_delimiter.toCharArray()[0], output_delimiter.toCharArray()[0]);
                     break;
                 }
                 case "edit-distance": {
-                    SparqlUtils.main(params);
+                    SparqlUtils sparqlUtils = new SparqlUtils();
+                    String input, output;
+                    try {
+                        input = params[0];
+                        output = params[1];
+                    } catch (Exception ex) {
+                        System.out.println("args[0] : Input csv \n args[1] : Output path \n");
+                        return;
+                    }
+                    sparqlUtils.calculateEditDistance(input, output, prefixFile, cores, input_delimiter.toCharArray()[0], output_delimiter.toCharArray()[0], idColumn, queryColumn, execTimeColumn);
                     break;
                 }
                 case "algebra-features": {
-                    TDBExecutionAndFeature.main(params);
+                    String inputFile = params[0];
+                    String outputFile = params[1];
+                    TDBExecutionAndFeature.produceALgebraFeatures(inputFile, outputFile, configFile, input_delimiter, output_delimiter, idColumn, queryColumn, execTimeColumn);
                     break;
                 }
                 case "predicate-features": {

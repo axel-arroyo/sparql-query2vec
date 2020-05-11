@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.naming.OperationNotSupportedException;
 
-import com.google.common.base.Stopwatch;
+import org.apache.commons.lang.time.StopWatch;
 
 import algorithms.BipartiteMatching;
 
@@ -277,7 +277,7 @@ public class RDFGraphMatching {
 		Graph g1 = RDF2GXL.readRDF("data/vc-db-1.rdf");
 		Graph g2 = RDF2GXL.readRDF("data/vc-db-2.rdf");
 		
-		Stopwatch stopwatch = new Stopwatch();
+		StopWatch StopWatch = new StopWatch();
 		long millis = 0;
 		
 		RDFGraphMatching matcher = new RDFGraphMatching();
@@ -290,44 +290,44 @@ public class RDFGraphMatching {
 		
 		
 		System.out.println("--------------------------------------");
-		stopwatch.reset();
-		stopwatch.start();
+		StopWatch.reset();
+		StopWatch.start();
 		double hungarian = matcher.distanceBipartiteHungarian(g1, g2);
-		stopwatch.stop();
-		millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+		StopWatch.stop();
+		millis = StopWatch.getTime();
 		System.out.println("Bipartite Hungarian: "+hungarian);
 		System.out.println("Execution time: "+millis+" milliseconds");
 
 		
 		System.out.println("--------------------------------------");
-		stopwatch.reset();
-		stopwatch.start();
+		StopWatch.reset();
+		StopWatch.start();
 		double vj = matcher.distanceBipartiteVolgenantJonker(g1, g2);
-		stopwatch.stop();
-		millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+		StopWatch.stop();
+		millis = StopWatch.getTime();
 		System.out.println("Bipartite VolgenantJonker: "+vj);
 		System.out.println("Execution time: "+millis+" milliseconds");
 
 		
 		System.out.println("--------------------------------------");
 		int s = 10;
-		stopwatch.reset();
-		stopwatch.start();
+		StopWatch.reset();
+		StopWatch.start();
 		double aStarBeam = matcher.distanceAStarBeam(g1, g2, s);
-		stopwatch.stop();
-		millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+		StopWatch.stop();
+		millis = StopWatch.getTime();
 		
 		System.out.println("A*-beam (s="+s+"): "+aStarBeam);
 		System.out.println("Execution time: "+millis+" milliseconds");
 		
 		/*
 		System.out.println("--------------------------------------");
-		stopwatch.reset();
-		stopwatch.start();
+		StopWatch.reset();
+		StopWatch.start();
 		
 		double aStar = matcher.distanceAStar(g1, g2);
-		stopwatch.stop();
-		millis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+		StopWatch.stop();
+		millis = StopWatch.getTime();
 
 		System.out.println("A*: "+aStar);
 		System.out.println("Execution time: "+millis+" milliseconds");

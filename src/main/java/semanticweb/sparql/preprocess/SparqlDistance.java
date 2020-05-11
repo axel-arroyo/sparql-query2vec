@@ -1,6 +1,6 @@
 package semanticweb.sparql.preprocess;
 
-import com.google.common.base.Stopwatch;
+import org.apache.commons.lang.time.StopWatch;
 import ged.AlgorithmConfig;
 import semanticweb.RDFGraphMatching;
 import semanticweb.sparql.config.ProjectConfiguration;
@@ -92,12 +92,12 @@ public class SparqlDistance {
 		
 		//List<String> queryPairs = new ArrayList<String>();
 		int count = 0;
-		Stopwatch watch = new Stopwatch();
+		StopWatch watch = new StopWatch();
 		watch.start();
 		while(in.hasNext()) {
 			if(count%10000 == 0) {
 				System.out.println((count)+" query pairs processed");
-				System.out.println("Time taken: "+watch.elapsed(TimeUnit.SECONDS)+" seconds");
+				System.out.println("Time taken: "+watch.getTime()+" seconds");
 			}
 			String line = in.nextLine();
 			String[] vals = line.split(" ");
@@ -149,7 +149,7 @@ public class SparqlDistance {
 		System.out.println("Total training queries:"+queries.size());
 		//List<String> queryPairs = new ArrayList<String>();
 		int count = 0;
-		Stopwatch watch = new Stopwatch();
+		StopWatch watch = new StopWatch();
 		watch.start();
 		
 		for(int i=0;i<queries.size();i++) {
@@ -160,7 +160,7 @@ public class SparqlDistance {
 				
 				if(count%10000 == 0) {
 					System.out.println((count)+" query pairs processed");
-					System.out.println("Time taken: "+watch.elapsed(TimeUnit.SECONDS)+" seconds");
+					System.out.println("Time taken: "+watch.getTime()+" seconds");
 				}
 				
 				String sparql1 = DBPediaUtils.getParam(q1, "query");
@@ -223,7 +223,7 @@ public class SparqlDistance {
 	
 	public void processTrainingQueries() throws Exception {
 
-		Stopwatch watch = new Stopwatch();
+		StopWatch watch = new StopWatch();
 		watch.start();
 		//System.out.println("Generating query sparse matrix file");
 		//generateQuerySparseMatrix(getProperty("TrainingQuery"),trainingQueryMatrixFilename);
@@ -234,22 +234,15 @@ public class SparqlDistance {
 		System.out.println("Generating hungarian distance matrix file");
 		generateQueryHungarianDistanceSparseMatrix(trainingQueryHungarianFilename);
 		watch.stop();
-		System.out.println("Elapsed time: "+watch.elapsed(TimeUnit.SECONDS)+" seconds");		
+		System.out.println("Elapsed time: "+watch.getTime()+" seconds");
 	}
-	
-	
-	public static void main(String[] args) throws Exception {
-		
-		SparqlDistance sd = new SparqlDistance();
-		
-		sd.processTrainingQueries();
 
-		
-		
+	public static void main(String[] args) throws Exception {
+		SparqlDistance sd = new SparqlDistance();
+		sd.processTrainingQueries();
 		/*sd.generateQuerySparseMatrix(sd.getProperty("TestQuerySmall"),"query_matrix.dat");
-		
-		Stopwatch watch = new Stopwatch();
-		
+		StopWatch watch = new StopWatch();
+
 		watch.start();
 		sd.generateQueryHungarianDistanceSparseMatrix("query_matrix.dat", "distance_matrix.dat");
 		watch.stop();

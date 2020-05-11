@@ -3,6 +3,7 @@ package semanticweb.sparql.preprocess;
 import com.hp.hpl.jena.query.Query;
 import com.hp.hpl.jena.query.QueryFactory;
 import com.hp.hpl.jena.rdf.model.Model;
+import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.sparql.algebra.Algebra;
 import com.hp.hpl.jena.sparql.algebra.Op;
 import com.hp.hpl.jena.sparql.algebra.OpVisitorBase;
@@ -249,51 +250,6 @@ public class AlgebraFeatureExtractor {
         });
         return features;
 
-    }
-
-    public static ArrayList<String[]> getQueries(String trainingQueryFile,String namespaces_path, ArrayList<Integer> not_include){
-        Model model = SparqlUtils.getNamespacesDBPed(namespaces_path);
-        Map<String, String> pref = model.getNsPrefixMap();
-        Object[] keys = pref.keySet().toArray();
-        boolean header = true;
-        ArrayList<String[]> queries = new ArrayList<>();
-        int index = 0;
-        try {
-            InputStreamReader csv = new InputStreamReader(new FileInputStream(trainingQueryFile));
-            CSVReader csvReader = new CSVReader (csv);
-            String[] record;
-            while ((record = csvReader.readNext()) != null) {
-                if (header){
-                    header = false;
-                    continue;
-                }
-                if(not_include.contains(index)){
-                    index++;
-                    continue;
-                }
-                else
-                {
-                    index++;
-                }
-                String query = record[1].replaceAll("^\"|\"$", "");
-                String prefixesStr = "";
-                for (int i = 0; i < model.getNsPrefixMap().size(); i++) {
-
-                    int a = query.indexOf(String.valueOf(keys[i]+":"));
-                    if (a != -1 ) {
-                        prefixesStr = prefixesStr.concat("PREFIX ").concat(String.valueOf(keys[i])).concat(": ").concat("<").concat(pref.get(String.valueOf(keys[i]))).concat("> \n");
-                    }
-                }
-                query  = prefixesStr.concat(" " +query);
-                //Pos in [0] refer to the ID of query in logs.
-                String[] curr = new String[]{record[0],query};
-                queries.add(curr);
-            }
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-        }
-        return  queries;
     }
 
     private void walkAlgebraTreeRecursive(Op op, final int level) {

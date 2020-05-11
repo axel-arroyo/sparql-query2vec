@@ -1,6 +1,6 @@
 package semanticweb.sparql.preprocess;
 
-import com.google.common.base.Stopwatch;
+import org.apache.commons.lang.time.StopWatch;
 import com.hp.hpl.jena.query.*;
 import semanticweb.sparql.utils.DBPediaUtils;
 
@@ -32,7 +32,7 @@ public class NordendQueryExecution {
 		FileInputStream fis = new FileInputStream(QUERIES);
 		Scanner in = new Scanner(fis);
 		
-		Stopwatch watch = new Stopwatch();
+		StopWatch watch = new StopWatch();
 		watch.start();		
 		int count = 0;
 		int goodQueriesCount = 0;
@@ -59,7 +59,7 @@ public class NordendQueryExecution {
 			try {
 				
 				ResultSet results = queryTDB(qStr);
-				long elapsed = watch.elapsed(TimeUnit.MILLISECONDS);
+				long elapsed = watch.getTime();
 
 
 				ResultSetRewindable rsrw = ResultSetFactory.copyResults(results);

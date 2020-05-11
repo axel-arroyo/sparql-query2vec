@@ -26,7 +26,7 @@ public class EditDistanceAction extends RecursiveTask {
         this.cores = cores;
     }
 
-    private void computeSubMatrix(int indexStart,int indexLast) {
+    private void computeSubMatrix(int indexStart, int indexLast) {
         StringBuilder sb = new StringBuilder();
         RDFGraphMatching matcher = new RDFGraphMatching();
         StringBuilder failed_row_column = new StringBuilder();

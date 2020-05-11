@@ -1,6 +1,6 @@
 package semanticweb.sparql.preprocess;
 
-import com.google.common.hash.Hashing;
+import org.apache.commons.codec.digest.DigestUtils;
 import com.hp.hpl.jena.rdf.model.Model;
 import semanticweb.RecursiveDeepSetFeaturizeAction;
 import semanticweb.sparql.SparqlUtils;
@@ -294,7 +294,7 @@ public class DeepSetFeatureExtractor extends  FeaturesExtractorBase{
                                     sb.append(element.get("object"));
                                     sb.append(",");
                                     String hash = String.valueOf(element.get("sampling_query_id"));
-                                    hash = Hashing.md5().hashString(hash).toString();
+                                    hash = DigestUtils.md5Hex(hash);
                                     if (tpfCardinalities.get(hash) != null) {
                                         int card = tpfCardinalities.get(hash);
                                         sb.append(card);

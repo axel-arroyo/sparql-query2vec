@@ -1,6 +1,6 @@
 package semanticweb.sparql.preprocess;
 
-import com.google.common.base.Stopwatch;
+import org.apache.commons.lang.time.StopWatch;
 import ged.AlgorithmConfig;
 import semanticweb.RDFGraphMatching;
 import semanticweb.sparql.config.ProjectConfiguration;
@@ -137,7 +137,7 @@ public class Cluster {
 		psSimVec.println(ProjectConfiguration.getPatternClusterSimVecFeatureHeader(K));
 		
 		System.out.println("Predicting clusters for validation dataset");
-		Stopwatch watch = new Stopwatch();
+		StopWatch watch = new StopWatch();
 		watch.start();		
 		while(in.hasNext()) {
 			String line = in.nextLine();
@@ -149,7 +149,7 @@ public class Cluster {
 			writeSimFeatureVector(psSimVec, sv);
 		}
 		watch.stop();
-		System.out.println("Elapsed time: "+watch.elapsed(TimeUnit.SECONDS)+" seconds");
+		System.out.println("Elapsed time: "+watch.getTime()+" seconds");
 		ps.close();
 		psSimVec.close();
 	}
@@ -166,7 +166,7 @@ public class Cluster {
 		psSimVec.println(ProjectConfiguration.getPatternClusterSimVecFeatureHeader(K));
 		
 		System.out.println("Predicting clusters for test dataset");
-		Stopwatch watch = new Stopwatch();
+		StopWatch watch = new StopWatch();
 		watch.start();		
 		while(in.hasNext()) {
 			String line = in.nextLine();
@@ -178,7 +178,7 @@ public class Cluster {
 			writeSimFeatureVector(psSimVec, sv);
 		}
 		watch.stop();
-		System.out.println("Elapsed time: "+watch.elapsed(TimeUnit.SECONDS)+" seconds");
+		System.out.println("Elapsed time: "+watch.getTime()+" seconds");
 		ps.close();
 		psSimVec.close();
 	}
@@ -219,7 +219,7 @@ public class Cluster {
 	
 	public void createFeatures() throws IOException {
 		System.out.println("Creating feature files for training, validation and test datasets");
-		Stopwatch watch = new Stopwatch();
+		StopWatch watch = new StopWatch();
 		watch.start();	
 		
 		PrintStream xFeaturePs = new PrintStream(trainingFeatureExtraFile);
@@ -251,7 +251,7 @@ public class Cluster {
 		
 		
 		watch.stop();
-		System.out.println("Elapsed time: "+watch.elapsed(TimeUnit.SECONDS)+" seconds");		
+		System.out.println("Elapsed time: "+watch.getTime()+" seconds");		
 	}
 	
 	public void loadDistanceMatrix() throws IOException {

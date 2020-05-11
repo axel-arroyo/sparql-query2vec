@@ -1,0 +1,17 @@
+[DBpedia]
+Endpoint = http://localhost:3030/dbpedia/sparql
+#Namespaces = /home/daniel/Documentos/ML/rhassan/query-performance/dbpedia_prefix.sparql
+
+[Query]
+TrainingQuery = /home/daniel/Documentos/Web_Semantica/Work/Sparql2vec/lsq_extracted1000.csv
+TrainingAlgebraFeatures = /home/daniel/Documentos/ML/rhassan/graph-edit-distance/data/test/x_features.txt
+FeaturesList = /home/daniel/Documentos/ML/rhassan/graph-edit-distance/data/config/features_list.txt
+
+[QueryClustering]
+# K is for clustering by kmediods
+K = 25
+DistanceHungarian = /home/daniel/Documentos/ML/rhassan/graph-edit-distance/scripts/qdistance-hungarian
+KmediodsMaxIters = 60
+
+[General]
+DatasetDirectory = 100

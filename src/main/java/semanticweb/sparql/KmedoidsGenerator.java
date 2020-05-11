@@ -54,7 +54,7 @@ public class KmedoidsGenerator {
         }
         return  new Array2DRowRealMatrix(doubles);
     }
-    public static void main(String[] args) {
+    public void proccessQueries(String[] args, char input_delimiter, char output_delimiter){
         System.out.println("Inside");
         String input = "";
         String output = "";
@@ -78,7 +78,7 @@ public class KmedoidsGenerator {
             indexesFile = args[2];
         }
         catch (Exception ex) {
-            System.out.println("You need to specify the output URL as the third parameter");
+            System.out.println("You need to specify the indexesFile URL as the third parameter");
             return;
         }
         try {
@@ -89,10 +89,6 @@ public class KmedoidsGenerator {
             System.out.println("You need to specify the k value as the fourth parameter");
             return;
         }
-//        int columnIndex = Integer.parseInt(args[2]);
-        Random random = new Random();
-
-
         double[][] distances = getArrayFromCsvFile(input);
         ArrayList<String[]> ids_time = SparqlUtils.getArrayFromCsvFile(indexesFile);
 
@@ -156,8 +152,8 @@ public class KmedoidsGenerator {
             System.out.println("Something was wrong in the writing process of the output");
 
         }
-
     }
+
     public static int[] makeSequence(int end) {
         int[] ret = new int[end+1];
         for (int i=0; i<=end; i++) {

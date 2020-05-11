@@ -1,6 +1,6 @@
 package semanticweb.sparql.preprocess;
 
-import com.google.common.base.Stopwatch;
+import org.apache.commons.lang.time.StopWatch;
 import com.hp.hpl.jena.query.*;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.tdb.TDBFactory;
@@ -20,6 +20,8 @@ public class TDBExecutionAndFeature {
 	private List<String> validationQueries;
 	private List<String> testQueries;
 	private Properties prop;
+	private String inputQueryFile, outputFile, configFile, input_delimiter, output_delimiter;
+	private int idColumn,  queryColumn, execTimeColumn;
 	private Model model;
 	private boolean directTDB = false;
 	
@@ -35,11 +37,30 @@ public class TDBExecutionAndFeature {
 		prop.load(new FileInputStream(config_file));
 	}
 
-	public void loadTrainingQueries() throws IOException {
-		String trainingQueryFile = prop.getProperty("TrainingQuery");
-		trainingQueries = AlgebraFeatureExtractor.getQueries(trainingQueryFile,prop.getProperty("Namespaces"), new ArrayList<>());
+	/**
+	 * Create the proccessing class for algebra features.
+	 * @param inputQueryFile Url for imput file that contain queries ins csv format
+	 * @param outputFile Url for output file that will contain queries features in csv format
+	 * @param configFile Config file, some configs could be defines like Namespaces, Endpoint
+	 * @param input_delimiter input delimiter character as string
+	 * @param output_delimiter output delimiter character as string
+	 * @param idColumn index of id of query in array that will be parsed by row.
+	 * @param queryColumn  index of query string in array that will be parsed by row.
+	 * @param execTimeColumn  index of  execution time in array that will be parsed by row.
+	 * @throws IOException Error on file read
+	 */
+	public TDBExecutionAndFeature(String inputQueryFile, String outputFile, String configFile, String input_delimiter, String output_delimiter, int idColumn, int queryColumn, int execTimeColumn) throws IOException {
+		prop = new Properties();
+		prop.load(new FileInputStream(configFile));
+		this.inputQueryFile= inputQueryFile;
+		this.outputFile= outputFile;
+		this.input_delimiter= input_delimiter;
+		this.output_delimiter= output_delimiter;
+		this.idColumn= idColumn;
+		this.queryColumn= queryColumn;
+		this.execTimeColumn= execTimeColumn;
 	}
-	
+
 	public ResultSet queryTDB(String qStr) {
 		String q = DBPediaUtils.refineForDBPedia(qStr);
 		Query query = QueryFactory.create(q);
@@ -67,7 +88,7 @@ public class TDBExecutionAndFeature {
 		PrintStream psTime = new PrintStream(timeOutFile);
 		PrintStream psRec = new PrintStream(recCountOutFile);
 		
-		Stopwatch watch = new Stopwatch();
+		StopWatch watch = new StopWatch();
 		watch.start();
 		
 		
@@ -81,7 +102,7 @@ public class TDBExecutionAndFeature {
 			watch.reset();
 			watch.start();
 			ResultSet results = queryTDB(qStr);
-			psTime.println(watch.elapsed(TimeUnit.MILLISECONDS));
+			psTime.println(watch.getTime());
 			count++;
 		}
 		psTime.close();
@@ -91,7 +112,7 @@ public class TDBExecutionAndFeature {
 	public void executeTrainingQueries() throws IOException {
 		System.out.println("Processing training queries");
 		
-		executeQueries(trainingQueries,prop.getProperty("TDBTrainingExecutionTime"),prop.getProperty("TDBTrainingRecordCount"));
+		executeQueries(trainingQueries, prop.getProperty("TDBTrainingExecutionTime"),prop.getProperty("TDBTrainingRecordCount"));
 		
 	}
 	
@@ -130,7 +151,7 @@ public class TDBExecutionAndFeature {
 		
 		
 		
-		Stopwatch watch = new Stopwatch();
+		StopWatch watch = new StopWatch();
 		watch.start();
 		
 		
@@ -179,7 +200,7 @@ public class TDBExecutionAndFeature {
 			try {
 				
 				ResultSet results = queryTDB(qStr);
-				long elapsed = watch.elapsed(TimeUnit.MILLISECONDS);
+				long elapsed = watch.getTime();
 
 				ResultSetRewindable rsrw = ResultSetFactory.copyResults(results);
 			    int numberOfResults = rsrw.size();
@@ -215,27 +236,30 @@ public class TDBExecutionAndFeature {
 	}
 	
 	private void generateAlgebraFeatureDataset() throws IOException {
-		loadTrainingQueries();
+		this.trainingQueries = SparqlUtils.getQueries(inputQueryFile, prop.getProperty("Namespaces"), new ArrayList<>(), this.idColumn, this.queryColumn,this.execTimeColumn,this.input_delimiter.toCharArray()[0]);
+
 		String[] header = ProjectConfiguration.getAlgebraFeatureHeader(prop.getProperty("FeaturesList"));
-		generateAlgebraFeatures(prop.getProperty("TrainingAlgebraFeatures"), header, trainingQueries);
+		generateAlgebraFeatures(this.outputFile, header, this.trainingQueries);
 		System.out.println("Precess finished.");
 	}
 	
 	private void generateAlgebraFeatures(String output, String[] header, List<String[]> queries) throws IOException {
 		AlgebraFeatureExtractor fe = new AlgebraFeatureExtractor(header);
-		BufferedWriter br = null;
+		BufferedWriter br;
 		StringBuilder sb = new StringBuilder();
 		try {
 			br = new BufferedWriter(new FileWriter(output));
 			{
 				sb.append("query_id");
-				sb.append(",");
+				sb.append(this.output_delimiter);
 				int i = 0;
 				while (i < header.length) {
 					sb.append(header[i]);
-					sb.append(",");
+					sb.append(this.output_delimiter);
 					i++;
 				}
+				sb.append("execTime");
+				sb.append(this.output_delimiter);
 				sb.append("\n");
 			}
 			for(String[] q:queries) {
@@ -243,11 +267,13 @@ public class TDBExecutionAndFeature {
 					double[] features = fe.extractFeatures(q[1]);
 					//Print Id of query.
 					sb.append(q[0]);
-					sb.append(",");
+					sb.append(this.output_delimiter);
 					for (double feature : features) {
 						sb.append(feature);
-						sb.append(",");
+						sb.append(this.output_delimiter);
 					}
+					sb.append(q[2]);
+					sb.append(this.output_delimiter);
 				}
 				catch (Exception ex){
 					ex.printStackTrace();
@@ -260,7 +286,20 @@ public class TDBExecutionAndFeature {
 			e.printStackTrace();
 		}
 	}
-	
+	public static void produceALgebraFeatures(String inputFile, String outputFile, String configFile, String input_delimiter, String output_delimiter, int idColumn, int queryColumn, int execTimeColumn)  throws Exception{
+		System.out.println("Inside algebra features generation");
+		if (configFile.isEmpty()) {
+			System.out.println("You need to specify a config file url as first parameter");
+			return;
+		}
+		StopWatch watch = new StopWatch();
+		watch.start();
+		TDBExecutionAndFeature wrapper = new TDBExecutionAndFeature(inputFile, outputFile, configFile,input_delimiter, output_delimiter, idColumn, queryColumn, execTimeColumn);
+
+		wrapper.generateAlgebraFeatureDataset();
+		watch.stop();
+		System.out.println("Total time for algebra query extraction: "+watch.getTime()+" ms");
+	}
 	public static void main(String[] args) throws Exception {
 		System.out.println("Inside algebra features generation");
 		String config_file = "";
@@ -271,13 +310,13 @@ public class TDBExecutionAndFeature {
 			System.out.println("You need to specify a config file url as first parameter");
 			return;
 		}
-		Stopwatch watch = new Stopwatch();
+		StopWatch watch = new StopWatch();
 		watch.start();		
 		TDBExecutionAndFeature wrapper = new TDBExecutionAndFeature(config_file);
 
 		wrapper.generateAlgebraFeatureDataset();
 		watch.stop();
-		System.out.println("Total time for algebra query extraction: "+watch.elapsed(TimeUnit.MILLISECONDS)+" ms");
+		System.out.println("Total time for algebra query extraction: "+watch.getTime()+" ms");
 		
 	}
 	

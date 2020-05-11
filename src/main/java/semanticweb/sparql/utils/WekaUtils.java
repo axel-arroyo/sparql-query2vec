@@ -1,6 +1,5 @@
 package semanticweb.sparql.utils;
 
-import com.google.common.primitives.Ints;
 import weka.core.Attribute;
 import weka.core.Instances;
 import weka.core.converters.ArffSaver;
@@ -285,13 +284,13 @@ public class WekaUtils {
 			selectedAtt.add(stdFilterdInstances.attribute(i).name());
 		}
 		
-		List<Integer> deletedAttIndex = new ArrayList<Integer>();
+		List<Integer> deletedAttIndex = new ArrayList<>();
 		for(Entry<String, Integer> e:attributeIndex.entrySet()) {
 			if(selectedAtt.contains(e.getKey())==false) {
 				deletedAttIndex.add(e.getValue());
 			}
 		}
-		int[] removedAttributes = Ints.toArray(deletedAttIndex);
+		int[] removedAttributes = deletedAttIndex.stream().mapToInt(i -> i).toArray();
 		
 		res.setInstances(stdFilterdInstances);
 		res.setRemovedAttributes(removedAttributes);

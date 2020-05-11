@@ -1,6 +1,5 @@
 package semanticweb.sparql.preprocess;
 
-import com.google.common.collect.ImmutableMap;
 import com.hp.hpl.jena.datatypes.xsd.impl.XSDBaseNumericType;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Node_Variable;
@@ -17,6 +16,7 @@ import com.hp.hpl.jena.sparql.expr.ExprVar;
 import com.hp.hpl.jena.sparql.expr.aggregate.*;
 import com.hp.hpl.jena.sparql.expr.nodevalue.NodeValueInteger;
 import com.hp.hpl.jena.sparql.syntax.*;
+import com.hp.hpl.jena.tdb.store.Hash;
 import semanticweb.sparql.utils.PredHistogram;
 
 import java.util.*;
@@ -36,9 +36,9 @@ public class RLQueryFeatureExtractor {
     public static int ONE_WAY_TWO_PREDS = 3;
     public static int TWO_OUTGOING_PRED_VAR_URI = 4;
     public static int TWO_INCOMING_PREDS_VAR_LITERAL = 5;
+    public Map<String,Integer> Operator;
+    public Map<Integer,String> OperatorInv;
 
-    public static Map<String,Integer> Operator =    ImmutableMap.of( "<",-2,"<=",-1,"=",0, ">=",1,">",2);
-    public static Map<Integer,String> OperatorInv = ImmutableMap.of( -2,"<",-1,"<=",0,"=",1, ">=",2,">");
 
     private HashMap<String, HashMap<String,Object>> filters;
     /**
@@ -46,6 +46,18 @@ public class RLQueryFeatureExtractor {
      * @param query
      */
     public RLQueryFeatureExtractor(String query) {
+        this.Operator = new HashMap<>();
+        this.Operator.put("<" , -2);
+        this.Operator.put("<=", -1);
+        this.Operator.put("=" , 0);
+        this.Operator.put(">=", 1);
+        this.Operator.put(">",  2);
+        this.OperatorInv.put(-2, "<");
+        this.OperatorInv.put(-1, "<=");
+        this.OperatorInv.put( 0, "=");
+        this.OperatorInv.put( 1, ">=");
+        this.OperatorInv.put( 2, ">");
+
         this.query = query;
         this.queryTables = new ArrayList<>();
         this.queryVariables = new ArrayList<>();

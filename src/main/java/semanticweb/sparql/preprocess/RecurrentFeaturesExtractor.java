@@ -1,6 +1,6 @@
 package semanticweb.sparql.preprocess;
 
-import com.google.common.hash.Hashing;
+import org.apache.commons.codec.digest.DigestUtils;
 import semanticweb.sparql.SparqlUtils;
 import semanticweb.sparql.utils.DBPediaUtils;
 
