@@ -6,45 +6,51 @@ import org.apache.commons.math3.linear.RealMatrix;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 
 public class KmedoidsGenerator {
 
-    public static double[][] getArrayFromCsvFile(String url, String delimiterCol) {
+    public static HashMap<String, Object> getArrayFromCsvFile(String url, String delimiterCol, int idColumn, int execTimeColumn) {
         BufferedReader csvReader;
         String row;
         double[][] arrayList = new double[0][];
+        ArrayList<HashMap<String,String>> idTimeVals = new ArrayList<>();
+        boolean first = true;
         try {
             csvReader = new BufferedReader(new FileReader(url));
-            row = csvReader.readLine();
-            String[] first_split = row.split(delimiterCol);
-            int len = first_split.length;
-            arrayList = new double[len][len];
-            for (int i = 0; i < len; i++) {
-                arrayList[0][i] = Double.parseDouble(first_split[i]);
-            }
-            //Siguientes líneas.
-            for (int i = 1; i < len; i++) {
-                String rowcurrent = csvReader.readLine();
-                String[] split = rowcurrent.split(delimiterCol);
-                for (int j = 0; j < len; j++) {
-                    arrayList[i][j] = Double.parseDouble(split[j]);
+            int i = 0;
+            while ((row = csvReader.readLine()) != null) {
+                String[] data = row.split(delimiterCol);
+                int len = data.length - 2;
+                if(first){
+                    arrayList = new double[len][len];
+                    first = false;
                 }
+                HashMap<String,String> idTime = new HashMap<>();
+                for (int j = 0; j < len; j++) {
+                    if(j == idColumn){
+                        idTime.put("id", data[j]);
+                    }
+                    else if(j==execTimeColumn){
+                        idTime.put("time", data[j]);
+                    }
+                    arrayList[i][j] = Double.parseDouble(data[j]);
+                }
+                idTimeVals.add(idTime);
+                i++;
             }
             csvReader.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return arrayList;
+        HashMap<String,Object> result = new HashMap();
+        result.put("idTime", idTimeVals);
+        result.put("arrayData", arrayList);
+        return result;
     }
 
-    public static double[][] getArrayFromCsvFile(String url) {
-
-        String delimiterCol = ",";
-        String delimiterRow = "\n";
-        return  getArrayFromCsvFile(url, delimiterCol);
-    }
     private RealMatrix getDataAsIndex(RealMatrix distance_matrix) {
         double[][] doubles = new double[distance_matrix.getRowDimension()][distance_matrix.getRowDimension()];
         for (int i = 0; i < distance_matrix.getRowDimension(); i++) {
@@ -55,7 +61,7 @@ public class KmedoidsGenerator {
         return  new Array2DRowRealMatrix(doubles);
     }
 
-    public void proccessQueries(String[] args,int k, String input_delimiter, char output_delimiter){
+    public void proccessQueries(String[] args,int k, String input_delimiter, char output_delimiter, int idColumn, int execTimeColumn){
         System.out.println("Inside");
         String input = "";
         String output = "";
@@ -74,14 +80,9 @@ public class KmedoidsGenerator {
             System.out.println("You need to specify the output URL as the second parameter");
             return;
         }
-//        try {
-//            indexesFile = args[2];
-//        }
-//        catch (Exception ex) {
-//            System.out.println("You need to specify the indexesFile URL as the third parameter");
-//            return;
-//        }
-        double[][] distances = getArrayFromCsvFile(input, input_delimiter);
+        HashMap<String,Object> data = getArrayFromCsvFile(input, input_delimiter,idColumn,execTimeColumn);
+        ArrayList<HashMap<String,String>> idTime = (ArrayList<HashMap<String, String>>) data.get("idTime");
+        double[][] distances = (double[][]) data.get("arrayData");
 //        ArrayList<String[]> ids_time = SparqlUtils.getArrayFromCsvFile(indexesFile);
 
         double[][] doubles = new double[distances.length][distances.length];
@@ -119,12 +120,8 @@ public class KmedoidsGenerator {
             sb.append("time");
             sb.append("\n");
             for (int i = 0; i < distances.length; i++) {
-//                if(ids_time.size() > 0){
-//                    for (int j = 0; j < ids_time.get(i).length; j++) {
-//                        sb.append(ids_time.get(i)[j]);
-//                        sb.append(output_delimiter);
-//                    }
-//                }
+                sb.append(idTime.get(i).get("id"));
+                sb.append(output_delimiter);
                 for (int j = 0; j < centroidList.size(); j++) {
 
                     int currentCentroid = centroidList.get(j);
@@ -133,11 +130,12 @@ public class KmedoidsGenerator {
                     sb.append(similarity);
                     sb.append(output_delimiter);
                 }
+                sb.append(idTime.get(i).get("time"));
                 sb.append("\n");
             }
             br.write(sb.toString());
             br.close();
-            System.out.println("Medoids vectors computed, output writed in :" +output);
+            System.out.println("Medoids vectors computed, output writed in :" + output);
         }
         catch (Exception ex){
             System.out.println("Something was wrong in the writing process of the output");

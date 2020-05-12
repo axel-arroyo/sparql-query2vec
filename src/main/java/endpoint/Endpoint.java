@@ -73,7 +73,7 @@ public class Endpoint {
                 case "kmedoids": {
                     System.out.println("Entering to kmedoids class");
                     KmedoidsGenerator kmedoidsGenerator = new KmedoidsGenerator();
-                    kmedoidsGenerator.proccessQueries(params, medoids, input_delimiter, output_delimiter.toCharArray()[0]);
+                    kmedoidsGenerator.proccessQueries(params, medoids, input_delimiter, output_delimiter.toCharArray()[0], idColumn, execTimeColumn);
                     break;
                 }
                 case "edit-distance": {
