@@ -23,4 +23,4 @@ jobs:
     - uses: actions/upload-artifact@v1
       with:
         name: sparql-query2vec.jar
-        path: target/graph-edit-distance-0.0.1.jar
+        path: target/sparql-query2vec-0.0.1.jar
