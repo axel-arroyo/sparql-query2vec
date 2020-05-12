@@ -29,6 +29,7 @@ public class KmedoidsGenerator {
                     first = false;
                 }
                 HashMap<String,String> idTime = new HashMap<>();
+                int indexReal = 0;
                 for (int j = 0; j < len; j++) {
                     if(j == idColumn){
                         idTime.put("id", data[j]);
@@ -36,7 +37,10 @@ public class KmedoidsGenerator {
                     else if(j==execTimeColumn){
                         idTime.put("time", data[j]);
                     }
-                    arrayList[i][j] = Double.parseDouble(data[j]);
+                    else{
+                        arrayList[i][indexReal] = Double.parseDouble(data[j]);
+                        indexReal++;
+                    }
                 }
                 idTimeVals.add(idTime);
                 i++;
