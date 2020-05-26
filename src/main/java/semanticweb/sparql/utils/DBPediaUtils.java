@@ -1,8 +1,8 @@
 package semanticweb.sparql.utils;
 
-import com.hp.hpl.jena.query.*;
-import com.hp.hpl.jena.rdf.model.RDFNode;
-import com.hp.hpl.jena.rdf.model.impl.LiteralImpl;
+import org.apache.jena.query.*;
+import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.rdf.model.impl.LiteralImpl;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.message.BasicNameValuePair;

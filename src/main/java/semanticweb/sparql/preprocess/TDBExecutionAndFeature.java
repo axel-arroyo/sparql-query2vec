@@ -1,18 +1,15 @@
 package semanticweb.sparql.preprocess;
 
-import org.apache.commons.lang.time.StopWatch;
-import com.hp.hpl.jena.query.*;
-import com.hp.hpl.jena.rdf.model.Model;
-import com.hp.hpl.jena.tdb.TDBFactory;
+import org.apache.commons.lang3.time.StopWatch;
+import org.apache.jena.query.*;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.tdb.TDBFactory;
 import semanticweb.sparql.SparqlUtils;
 import semanticweb.sparql.config.ProjectConfiguration;
 import semanticweb.sparql.utils.DBPediaUtils;
-import semanticweb.sparql.utils.GeneralUtils;
 
 import java.io.*;
-import java.lang.reflect.Array;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 public class TDBExecutionAndFeature {
 	

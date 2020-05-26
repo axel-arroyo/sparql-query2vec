@@ -1,13 +1,13 @@
 package semanticweb.sparql.preprocess;
 
-import com.hp.hpl.jena.datatypes.xsd.impl.XSDBaseNumericType;
-import com.hp.hpl.jena.graph.Node;
-import com.hp.hpl.jena.query.Query;
-import com.hp.hpl.jena.query.QueryFactory;
-import com.hp.hpl.jena.sparql.algebra.Algebra;
-import com.hp.hpl.jena.sparql.algebra.Op;
-import com.hp.hpl.jena.sparql.core.TriplePath;
-import com.hp.hpl.jena.sparql.syntax.*;
+import org.apache.jena.datatypes.xsd.impl.XSDBaseNumericType;
+import org.apache.jena.graph.Node;
+import org.apache.jena.query.Query;
+import org.apache.jena.query.QueryFactory;
+import org.apache.jena.sparql.algebra.Algebra;
+import org.apache.jena.sparql.algebra.Op;
+import org.apache.jena.sparql.core.TriplePath;
+import org.apache.jena.sparql.syntax.*;
 import semanticweb.sparql.Operator;
 import java.util.*;
 
@@ -23,7 +23,6 @@ public class QueryFeatureExtractor {
     private HashMap<String, HashMap<String, ArrayList<String>>> queryJoinsV1Nodes;
     private ArrayList<HashMap<String, Object>> queryPredicates;
     private ArrayList<HashMap<String, Object>> queryPredicatesUris;
-    private ArrayList<HashMap<String, Object>> queryPredicatesUrisV1;
     private String query;
     private String id;
     private String cardinality;
@@ -44,7 +43,6 @@ public class QueryFeatureExtractor {
         this.queryJoinsV1Nodes = new HashMap<>();
         this.queryPredicates = new ArrayList<>();
         this.queryPredicatesUris = new ArrayList<>();
-        this.queryPredicatesUrisV1 = new ArrayList<>();
     }
 
     /**
@@ -61,7 +59,6 @@ public class QueryFeatureExtractor {
         this.queryJoinsV1Nodes = new HashMap<>();
         this.queryPredicates = new ArrayList<>();
         this.queryPredicatesUris = new ArrayList<>();
-        this.queryPredicatesUrisV1 = new ArrayList<>();
     }
     private void processTPFJoinsV1(Node subject, Node predicate, Node object){
         String subjectName = subject.getName();

@@ -22,18 +22,10 @@ package semanticweb.sparql;
 // The ARQ application API.
 import org.apache.jena.atlas.io.IndentedWriter ;
 
-import com.hp.hpl.jena.query.Query ;
-import com.hp.hpl.jena.query.QueryExecution ;
-import com.hp.hpl.jena.query.QueryExecutionFactory ;
-import com.hp.hpl.jena.query.QueryFactory ;
-import com.hp.hpl.jena.query.QuerySolution ;
-import com.hp.hpl.jena.query.ResultSet ;
-import com.hp.hpl.jena.rdf.model.Literal ;
-import com.hp.hpl.jena.rdf.model.Model ;
-import com.hp.hpl.jena.rdf.model.ModelFactory ;
-import com.hp.hpl.jena.rdf.model.RDFNode ;
-import com.hp.hpl.jena.rdf.model.Resource ;
-import com.hp.hpl.jena.vocabulary.DC ;
+import org.apache.jena.query.* ;
+import org.apache.jena.rdf.model.* ;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.vocabulary.DC_10;
 
 /** Example 1 : Execute a simple SELECT query on a model
  *  to find the DC titles contained in a model. */
@@ -49,7 +41,7 @@ public class Ex1
         Model model = createModel() ;
         
         // First part or the query string 
-        String prolog = "PREFIX dc: <"+DC.getURI()+">" ;
+        String prolog = "PREFIX dc: <"+ DC_10.getURI()+">" ;
         
         // Query string.
         String queryString = prolog + NL +
@@ -105,10 +97,10 @@ public class Ex1
         Resource r1 = m.createResource("http://example.org/book#1") ;
         Resource r2 = m.createResource("http://example.org/book#2") ;
         
-        r1.addProperty(DC.title, "SPARQL - the book")
-          .addProperty(DC.description, "A book about SPARQL") ;
+        r1.addProperty(DC_10.title, "SPARQL - the book")
+          .addProperty(DC_10.description, "A book about SPARQL") ;
         
-        r2.addProperty(DC.title, "Advanced techniques for SPARQL") ;
+        r2.addProperty(DC_10.title, "Advanced techniques for SPARQL") ;
         
         return m ;
     }

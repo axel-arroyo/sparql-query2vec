@@ -127,7 +127,7 @@ public class Endpoint {
                 }
                 case "rlearning": {
                     ReinforcementLearningExtractor rpfv = new ReinforcementLearningExtractor();
-                    rpfv.getArrayFeaturesVector(params[0], params[1], params[2], queryColumn, idColumn, execTimeColumn, length, output_delimiter, input_delimiter, output_element_delimiter);
+                    rpfv.getArrayFeaturesVector(params[0], params[1], prefixFile, queryColumn, idColumn, execTimeColumn, length, output_delimiter, input_delimiter, output_element_delimiter);
                     break;
                 }
                 case "execute-sampling-hist": {

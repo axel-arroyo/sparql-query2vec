@@ -4,16 +4,8 @@ import java.io.InputStream;
 import java.util.Enumeration;
 import java.util.Vector;
 
-import com.hp.hpl.jena.rdf.model.Model;
-import com.hp.hpl.jena.rdf.model.ModelFactory;
-import com.hp.hpl.jena.rdf.model.NodeIterator;
-import com.hp.hpl.jena.rdf.model.RDFNode;
-import com.hp.hpl.jena.rdf.model.ResIterator;
-import com.hp.hpl.jena.rdf.model.Resource;
-import com.hp.hpl.jena.rdf.model.Statement;
-import com.hp.hpl.jena.rdf.model.StmtIterator;
-import com.hp.hpl.jena.util.FileManager;
-
+import org.apache.jena.rdf.model.*;
+import org.apache.jena.util.FileManager;
 import util.Edge;
 import util.Graph;
 import util.Node;
@@ -290,7 +282,7 @@ public class RDF2GXL {
 	}
 	/**
 	 * Reads an RDF graph from a file and puts it into a {@link Graph}
-	 * @param Filename file name for the RDF graph
+	 * @param filename file name for the RDF graph
 	 * @param graphId Graph id. Sometimes useful for indexing
 	 * @return {@link Graph} that represents the RDF graph
 	 * @throws Exception

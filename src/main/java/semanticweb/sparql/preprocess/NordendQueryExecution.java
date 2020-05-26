@@ -1,14 +1,13 @@
 package semanticweb.sparql.preprocess;
 
-import org.apache.commons.lang.time.StopWatch;
-import com.hp.hpl.jena.query.*;
+import org.apache.commons.lang3.time.StopWatch;
+import org.apache.jena.query.*;
 import semanticweb.sparql.utils.DBPediaUtils;
 
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Scanner;
-import java.util.concurrent.TimeUnit;
 
 public class NordendQueryExecution {
 	

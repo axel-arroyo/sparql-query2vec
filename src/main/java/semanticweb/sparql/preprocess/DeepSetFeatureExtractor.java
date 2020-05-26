@@ -1,7 +1,7 @@
 package semanticweb.sparql.preprocess;
 
 import org.apache.commons.codec.digest.DigestUtils;
-import com.hp.hpl.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.Model;
 import semanticweb.RecursiveDeepSetFeaturizeAction;
 import semanticweb.sparql.SparqlUtils;
 import semanticweb.sparql.utils.DBPediaUtils;

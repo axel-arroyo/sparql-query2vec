@@ -1,12 +1,13 @@
 package semanticweb.sparql.preprocess;
 
-import com.hp.hpl.jena.graph.Node;
-import com.hp.hpl.jena.query.Query;
-import com.hp.hpl.jena.query.QueryFactory;
-import com.hp.hpl.jena.sparql.algebra.Algebra;
-import com.hp.hpl.jena.sparql.algebra.Op;
-import com.hp.hpl.jena.sparql.core.TriplePath;
-import com.hp.hpl.jena.sparql.syntax.*;
+
+import org.apache.jena.graph.Node;
+import org.apache.jena.query.Query;
+import org.apache.jena.query.QueryFactory;
+import org.apache.jena.sparql.algebra.Algebra;
+import org.apache.jena.sparql.algebra.Op;
+import org.apache.jena.sparql.core.TriplePath;
+import org.apache.jena.sparql.syntax.*;
 
 import java.util.*;
 

@@ -1,6 +1,6 @@
 package semanticweb.sparql.preprocess;
 
-import org.apache.commons.lang.time.StopWatch;
+import org.apache.commons.lang3.time.StopWatch;
 import ged.AlgorithmConfig;
 import semanticweb.RDFGraphMatching;
 import semanticweb.sparql.config.ProjectConfiguration;

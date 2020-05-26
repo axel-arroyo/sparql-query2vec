@@ -2,6 +2,7 @@ package utils;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 
 
 import org.apache.commons.io.IOUtils;
@@ -13,7 +14,7 @@ public class Utils {
 		
 		//InputStream inStream = new InputStre
 		
-		return IOUtils.toString(fs);
+		return IOUtils.toString(fs, Charset.defaultCharset());
 	}
 	
 	

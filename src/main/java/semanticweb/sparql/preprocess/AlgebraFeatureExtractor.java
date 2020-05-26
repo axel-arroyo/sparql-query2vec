@@ -1,23 +1,14 @@
 package semanticweb.sparql.preprocess;
 
-import com.hp.hpl.jena.query.Query;
-import com.hp.hpl.jena.query.QueryFactory;
-import com.hp.hpl.jena.rdf.model.Model;
-import com.hp.hpl.jena.rdf.model.ModelFactory;
-import com.hp.hpl.jena.sparql.algebra.Algebra;
-import com.hp.hpl.jena.sparql.algebra.Op;
-import com.hp.hpl.jena.sparql.algebra.OpVisitorBase;
-import com.hp.hpl.jena.sparql.algebra.OpWalker;
-import com.hp.hpl.jena.sparql.algebra.op.*;
-import com.hp.hpl.jena.sparql.path.*;
-import liquibase.util.csv.opencsv.CSVReader;
 import org.apache.commons.collections.map.DefaultedMap;
-import semanticweb.sparql.SparqlUtils;
+import org.apache.jena.query.*;
+import org.apache.jena.sparql.algebra.Op;
+import org.apache.jena.sparql.algebra.OpWalker;
+import org.apache.jena.sparql.algebra.op.*;
+import org.apache.jena.sparql.core.DatasetGraphFactory;
+import org.apache.jena.sparql.engine.Plan;
+import org.apache.jena.sparql.engine.binding.BindingHashMap;
 import semanticweb.sparql.config.ProjectConfiguration;
-
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.*;
 import java.util.Map.Entry;
 
@@ -25,7 +16,7 @@ import java.util.Map.Entry;
 public class AlgebraFeatureExtractor {
 
 
-    private Map<String, Integer> featureIndex = new HashMap<String, Integer>();
+    private Map<String, Integer> featureIndex = new HashMap<>();
     private Map<Op, Boolean> visited = null;
 	private boolean debug = false;
 	private int treeHeight = 0;
@@ -43,15 +34,15 @@ public class AlgebraFeatureExtractor {
     }
 
     public double[] extractFeatures(String queryStr) {
-        Query query = QueryFactory.create(queryStr);
-
+        Query query = QueryFactory.create(queryStr, Syntax.syntaxARQ);
         // Generate algebra
-        Op op = Algebra.compile(query);
-
+//        Op op = Algebra.compile(query);
+        Plan a = QueryExecutionFactory.createPlan(query, DatasetGraphFactory.createTxnMem(), new BindingHashMap());
+        Op op = a.getOp();
         if (debug) {
-            System.out.println("Algebra tree:\n " + op);
+//            System.out.println("Algebra tree:\n " + a );
         }
-        //System.out.println("------------------------") ;		
+        //System.out.println("------------------------") ;
         double[] features = getFeatures(op);
 
 
@@ -67,9 +58,13 @@ public class AlgebraFeatureExtractor {
     }
 
     private double[] getFeatures(Op op) {
-        final double[] features = new double[featureIndex.size()];
-
-        OpWalker.walk(op, new OpVisitorBase() {
+//        final double[] features = new double[featureIndex.size()];
+        
+        OpWalker ow = new OpWalker();
+        OperatorsQueryVisitor visitor = new OperatorsQueryVisitor(featureIndex);
+        ow.walk(op, visitor);
+        double[] features = visitor.getFeatures();
+       /* OpWalker.walk(op, new OpVisitorBase() {
 
             public void visit(OpTriple opTriple) {
                 //System.out.print("triple ");
@@ -247,7 +242,7 @@ public class AlgebraFeatureExtractor {
             }
 
 
-        });
+        });*/
         return features;
 
     }
@@ -464,7 +459,7 @@ public class AlgebraFeatureExtractor {
 		}
     }
 
-    private void walkAlgebraTreeOld(Op op, final int level) {
+/*    private void walkAlgebraTreeOld(Op op, final int level) {
 
         visited.put(op, true);
         System.out.println("Level:" + level);
@@ -644,7 +639,7 @@ public class AlgebraFeatureExtractor {
                 System.out.println(arg0.toString());
             }
         });
-    }
+    }*/
 
     public static void main(String[] args) {
         String[] headers = (String[]) ProjectConfiguration.getAlgebraFeatureHeader();
@@ -652,7 +647,7 @@ public class AlgebraFeatureExtractor {
         AlgebraFeatureExtractor fe = new AlgebraFeatureExtractor(headers);
 
         fe.setDebug(true);
-        String queryStr = "PREFIX foaf:       <http://xmlns.com/foaf/0.1/> SELECT DISTINCT ?x ?name  WHERE { {?x foaf:mbox <mailto:person@server.com> }. {?x foaf:name ?name .}}";
+        String queryStr = "PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT DISTINCT ?x ?name  WHERE { ?x foaf:mbox <mailto:person@server.com> . ?x foaf:name ?name . }";
         System.out.println(queryStr);
         double[] features = fe.extractFeatures(queryStr);
 
@@ -662,7 +657,7 @@ public class AlgebraFeatureExtractor {
 
         int count = 0;
         System.out.println();
-        List<Entry<String, Integer>> ll = new ArrayList<Entry<String, Integer>>(fe.featureIndex.entrySet());
+        List<Entry<String, Integer>> ll = new ArrayList<>(fe.featureIndex.entrySet());
         //fe.featureIndex.entrySet();
 
         ll.sort(new Comparator<Entry<String, Integer>>() {
@@ -683,5 +678,4 @@ public class AlgebraFeatureExtractor {
             count++;
         }
     }
-
 }

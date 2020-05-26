@@ -20,20 +20,13 @@ package semanticweb.sparql;
 
 import java.util.Iterator;
 
-import com.hp.hpl.jena.graph.Triple;
-import com.hp.hpl.jena.query.Query ;
-import com.hp.hpl.jena.query.QueryFactory ;
-import com.hp.hpl.jena.sparql.algebra.Algebra ;
-import com.hp.hpl.jena.sparql.algebra.Op ;
-import com.hp.hpl.jena.sparql.core.BasicPattern;
-import com.hp.hpl.jena.sparql.core.TriplePath;
-import com.hp.hpl.jena.sparql.engine.QueryIterator ;
-import com.hp.hpl.jena.sparql.engine.binding.Binding ;
-import com.hp.hpl.jena.sparql.syntax.Element;
-import com.hp.hpl.jena.sparql.syntax.ElementPathBlock;
-import com.hp.hpl.jena.sparql.syntax.ElementTriplesBlock;
-import com.hp.hpl.jena.sparql.syntax.ElementVisitorBase;
-import com.hp.hpl.jena.sparql.syntax.ElementWalker;
+import org.apache.jena.graph.Triple;
+import org.apache.jena.query.Query;
+import org.apache.jena.query.QueryFactory;
+import org.apache.jena.sparql.algebra.Algebra;
+import org.apache.jena.sparql.algebra.Op;
+import org.apache.jena.sparql.core.TriplePath;
+import org.apache.jena.sparql.syntax.*;
 
 /** Simple example to show parsing a query and producing the
  *  SPARQL agebra expression for the query. */

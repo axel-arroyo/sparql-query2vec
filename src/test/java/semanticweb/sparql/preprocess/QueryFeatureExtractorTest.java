@@ -1,5 +1,5 @@
 package semanticweb.sparql.preprocess;
-import com.hp.hpl.jena.query.ResultSet;
+import org.apache.jena.query.ResultSet;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 import semanticweb.sparql.SparqlUtils;

@@ -1,13 +1,13 @@
 package semanticweb.sparql;
 
-import com.hp.hpl.jena.graph.Node;
-import com.hp.hpl.jena.graph.Triple;
-import com.hp.hpl.jena.query.*;
-import com.hp.hpl.jena.rdf.model.*;
-import com.hp.hpl.jena.sparql.core.TriplePath;
-import com.hp.hpl.jena.sparql.syntax.*;
 import liquibase.util.csv.opencsv.CSVReader;
 import nanoxml.XMLElement;
+import org.apache.jena.graph.Node;
+import org.apache.jena.graph.Triple;
+import org.apache.jena.query.*;
+import org.apache.jena.rdf.model.*;
+import org.apache.jena.sparql.core.TriplePath;
+import org.apache.jena.sparql.syntax.*;
 import semanticweb.EditDistanceAction;
 import semanticweb.GraphBuildAction;
 import semanticweb.RDF2GXL;
@@ -24,7 +24,7 @@ public class SparqlUtils {
     final public static String SPARQL_VAR_NS = "http://wimmics.inria.fr/kolflow/qp#";
     public static Model model;
     public static String prefixes = "";
-    public static ArrayList<String[]> queriesError = new ArrayList();
+    public static ArrayList<String[]> queriesError = new ArrayList<>();
 
     public static void getPropsAndObjectCount() {
 //		Map<String, Integer> map = new HashMap<String, Integer>();
@@ -42,7 +42,6 @@ public class SparqlUtils {
 
             StringBuilder sb = new StringBuilder();
             StringBuilder sb2 = new StringBuilder();
-            int count = 0;
             while (results.hasNext()) {
                 String prop = results.next().get("property").toString();
                 sb.append("<" + prop + ">");
@@ -51,8 +50,6 @@ public class SparqlUtils {
                 sb2.append(",");
                 sb2.append(getObjectCount(prop));
                 sb2.append("\n");
-
-                count++;
             }
             br.write(sb.toString());
             br.close();
@@ -67,14 +64,14 @@ public class SparqlUtils {
     /**
      * Retrieve array list of csv file, using delimiter  column param
      *
-     * @param url
-     * @param delimiterCol
-     * @return
+     * @param url String File path to extract data.
+     * @param delimiterCol String delimiter of columns.
+     * @return ArrayList with data
      */
-    public static ArrayList getArrayFromCsvFile(String url, String delimiterCol) {
+    public static ArrayList<String[]> getArrayFromCsvFile(String url, String delimiterCol) {
         BufferedReader csvReader;
         String row;
-        ArrayList arrayList = new ArrayList();
+        ArrayList<String[]> arrayList = new ArrayList<>();
         try {
             csvReader = new BufferedReader(new FileReader(url));
             while ((row = csvReader.readLine()) != null) {
@@ -91,15 +88,15 @@ public class SparqlUtils {
     /**
      * Retrieve array list of csv file, using delimiter  column param
      *
-     * @param url
-     * @param delimiterCol
-     * @param delimiterRow
-     * @return
+     * @param url String File path to extract data.
+     * @param delimiterCol String delimiter of columns.
+     * @param delimiterRow String delimiter of rows.
+     * @return ArrayList with data
      */
-    public static ArrayList getArrayFromCsvFile(String url, String delimiterCol, String delimiterRow) {
+    public static ArrayList<String[]> getArrayFromCsvFile(String url, String delimiterCol, String delimiterRow) {
         BufferedReader csvReader;
         String row;
-        ArrayList arrayList = new ArrayList();
+        ArrayList<String[]> arrayList = new ArrayList<>();
         try {
             csvReader = new BufferedReader(new FileReader(url));
             while ((row = csvReader.readLine()) != null) {
@@ -181,7 +178,9 @@ public class SparqlUtils {
     }
 
     /**
-     * @return
+     *
+     * @param url File url to extract namespaces
+     * @return HashMap with
      */
     public static HashMap<String, String> getNamespacesStr(String url) {
         String prefixes = "";
@@ -202,7 +201,9 @@ public class SparqlUtils {
     }
 
     /**
-     * @return
+     * Get namespaces from file.
+     * @param url File url to extract namespaces
+     * @return Model object of Jena that contains namespaces.
      */
     public static Model getNamespaces(String url) {
 
@@ -285,8 +286,9 @@ public class SparqlUtils {
     /**
      * Retrieve array of queries in vectors way
      *
-     * @param urlQueries
-     * @param urlFeatures
+     * @param urlQueries File url to read queries.
+     * @param urlFeatures File url to read features by line.
+     * return ArrayList queries.
      */
     public static ArrayList<String[]> getArrayFeaturesVector(String urlQueries, String urlFeatures, String namespaces, String output) {
 

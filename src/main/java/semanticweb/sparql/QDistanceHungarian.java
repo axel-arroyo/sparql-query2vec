@@ -58,7 +58,7 @@ public class QDistanceHungarian {
 	public static void main(String[] args) {
 		try {
 			//LogManager.getRootLogger().setLevel(Level.OFF);
-			Log.setCmdLogging() ;
+//			Log.setCmdLogging() ;
 			
 			int n = args.length;
 			

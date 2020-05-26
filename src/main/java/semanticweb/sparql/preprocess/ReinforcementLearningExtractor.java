@@ -1,11 +1,11 @@
 package semanticweb.sparql.preprocess;
 
-import com.hp.hpl.jena.query.*;
-import com.hp.hpl.jena.rdf.model.Model;
-import com.hp.hpl.jena.rdf.model.RDFNode;
-import com.hp.hpl.jena.rdf.model.impl.LiteralImpl;
-import com.hp.hpl.jena.sparql.algebra.Algebra;
-import com.hp.hpl.jena.sparql.algebra.Op;
+import org.apache.jena.query.*;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.rdf.model.impl.LiteralImpl;
+import org.apache.jena.sparql.algebra.Algebra;
+import org.apache.jena.sparql.algebra.Op;
 import semanticweb.sparql.SparqlUtils;
 import semanticweb.sparql.utils.PredHistogram;
 
@@ -44,7 +44,7 @@ public class ReinforcementLearningExtractor extends FeaturesExtractorBase {
                                                                  String input_delimiter,
                                                                  String output_element_delimiter) {
 
-        if (!namespaces.equals("false")) {
+        if (!namespaces.equals("")) {
             model = SparqlUtils.getNamespacesDBPed(namespaces);
         }
         ArrayList<Map<String, Object>> vectors = new ArrayList<>();

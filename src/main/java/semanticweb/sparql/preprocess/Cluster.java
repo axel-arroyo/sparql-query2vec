@@ -1,6 +1,6 @@
 package semanticweb.sparql.preprocess;
 
-import org.apache.commons.lang.time.StopWatch;
+import org.apache.commons.lang3.time.StopWatch;
 import ged.AlgorithmConfig;
 import semanticweb.RDFGraphMatching;
 import semanticweb.sparql.config.ProjectConfiguration;
@@ -29,10 +29,10 @@ public class Cluster {
 	private String testSimilarityVectorFeature = null;
 	private String distanceMatrixFile = null;
 	
-	private List<Integer> center_idx = new ArrayList<Integer>();
-	private List<Integer> idx = new ArrayList<Integer>();
-	private List<Integer> validationIdx = new ArrayList<Integer>();
-	private List<Integer> testIdx = new ArrayList<Integer>();
+	private List<Integer> center_idx = new ArrayList<>();
+	private List<Integer> idx = new ArrayList<>();
+	private List<Integer> validationIdx = new ArrayList<>();
+	private List<Integer> testIdx = new ArrayList<>();
 	
 	private List<String> queries;
 	private Properties prop;

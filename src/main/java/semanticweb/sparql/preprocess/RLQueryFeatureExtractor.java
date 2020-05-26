@@ -1,22 +1,21 @@
 package semanticweb.sparql.preprocess;
 
-import com.hp.hpl.jena.datatypes.xsd.impl.XSDBaseNumericType;
-import com.hp.hpl.jena.graph.Node;
-import com.hp.hpl.jena.graph.Node_Variable;
-import com.hp.hpl.jena.graph.Triple;
-import com.hp.hpl.jena.query.Query;
-import com.hp.hpl.jena.query.QueryFactory;
-import com.hp.hpl.jena.sparql.algebra.Algebra;
-import com.hp.hpl.jena.sparql.algebra.Op;
-import com.hp.hpl.jena.sparql.core.TriplePath;
-import com.hp.hpl.jena.sparql.expr.E_IsNumeric;
-import com.hp.hpl.jena.sparql.expr.Expr;
-import com.hp.hpl.jena.sparql.expr.ExprFunction2;
-import com.hp.hpl.jena.sparql.expr.ExprVar;
-import com.hp.hpl.jena.sparql.expr.aggregate.*;
-import com.hp.hpl.jena.sparql.expr.nodevalue.NodeValueInteger;
-import com.hp.hpl.jena.sparql.syntax.*;
-import com.hp.hpl.jena.tdb.store.Hash;
+import org.apache.jena.datatypes.xsd.impl.XSDBaseNumericType;
+import org.apache.jena.graph.*;
+import org.apache.jena.query.*;
+
+import org.apache.jena.sparql.algebra.Algebra;
+import org.apache.jena.sparql.algebra.Op;
+import org.apache.jena.sparql.core.TriplePath;
+import org.apache.jena.sparql.expr.E_IsNumeric;
+import org.apache.jena.sparql.expr.Expr;
+import org.apache.jena.sparql.expr.ExprFunction2;
+import org.apache.jena.sparql.expr.ExprVar;
+import org.apache.jena.sparql.expr.aggregate.AggCountVarDistinct;
+import org.apache.jena.sparql.expr.aggregate.AggMax;
+import org.apache.jena.sparql.expr.aggregate.AggMin;
+import org.apache.jena.sparql.expr.nodevalue.NodeValueInteger;
+import org.apache.jena.sparql.syntax.*;
 import semanticweb.sparql.utils.PredHistogram;
 
 import java.util.*;
