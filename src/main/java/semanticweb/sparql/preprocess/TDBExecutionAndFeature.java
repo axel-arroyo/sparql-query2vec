@@ -46,9 +46,12 @@ public class TDBExecutionAndFeature {
 	 * @param execTimeColumn  index of  execution time in array that will be parsed by row.
 	 * @throws IOException Error on file read
 	 */
-	public TDBExecutionAndFeature(String inputQueryFile, String outputFile, String configFile, String input_delimiter, String output_delimiter, int idColumn, int queryColumn, int execTimeColumn) throws IOException {
+	public TDBExecutionAndFeature(String inputQueryFile, String outputFile, String configFile, String prefixFile, String input_delimiter, String output_delimiter, int idColumn, int queryColumn, int execTimeColumn) throws IOException {
 		prop = new Properties();
 		prop.load(new FileInputStream(configFile));
+		if(!prefixFile.isEmpty()){
+			this.prop.setProperty("Namespaces", prefixFile);
+		}
 		this.inputQueryFile= inputQueryFile;
 		this.outputFile= outputFile;
 		this.input_delimiter= input_delimiter;
@@ -283,7 +286,7 @@ public class TDBExecutionAndFeature {
 			e.printStackTrace();
 		}
 	}
-	public static void produceALgebraFeatures(String inputFile, String outputFile, String configFile, String input_delimiter, String output_delimiter, int idColumn, int queryColumn, int execTimeColumn)  throws Exception{
+	public static void produceALgebraFeatures(String inputFile, String outputFile, String configFile, String prefixFile, String input_delimiter, String output_delimiter, int idColumn, int queryColumn, int execTimeColumn)  throws Exception{
 		System.out.println("Inside algebra features generation");
 		if (configFile.isEmpty()) {
 			System.out.println("You need to specify a config file url as first parameter");
@@ -291,7 +294,7 @@ public class TDBExecutionAndFeature {
 		}
 		StopWatch watch = new StopWatch();
 		watch.start();
-		TDBExecutionAndFeature wrapper = new TDBExecutionAndFeature(inputFile, outputFile, configFile,input_delimiter, output_delimiter, idColumn, queryColumn, execTimeColumn);
+		TDBExecutionAndFeature wrapper = new TDBExecutionAndFeature(inputFile, outputFile, configFile, prefixFile, input_delimiter, output_delimiter, idColumn, queryColumn, execTimeColumn);
 
 		wrapper.generateAlgebraFeatureDataset();
 		watch.stop();

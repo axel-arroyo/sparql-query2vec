@@ -1,8 +1,11 @@
+import com.sun.org.apache.xml.internal.serialize.LineSeparator;
+import org.apache.jena.datatypes.xsd.XSDDateTime;
 import org.apache.jena.datatypes.xsd.impl.XSDBaseNumericType;
+import org.apache.jena.datatypes.xsd.impl.XSDDateTimeStampType;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
-import org.apache.jena.query.Query;
-import org.apache.jena.query.QueryFactory;
+import org.apache.jena.query.*;
+import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.sparql.algebra.Algebra;
 import org.apache.jena.sparql.algebra.Op;
 import org.apache.jena.sparql.core.TriplePath;
@@ -12,10 +15,7 @@ import semanticweb.sparql.Operator;
 import semanticweb.sparql.QDistanceHungarian;
 import semanticweb.sparql.SparqlUtils;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -400,5 +400,87 @@ public class SparqlUtilsTest {
                         )
         );
         return new ArrayList[]{queryTables, queryVariables, queryJoins};
+    }
+
+    @Test
+    public void extractData(){
+        String qs =
+                "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>" +
+                "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> " +
+                "PREFIX lsqr: <http://lsq.aksw.org/res/>  " +
+                "PREFIX lsqv: <http://lsq.aksw.org/vocab#>  " +
+                "PREFIX sp: <http://spinrdf.org/sp#>  " +
+                "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>  " +
+                "PREFIX purl: <http://purl.org/dc/terms/>  \n" +
+                "\n" +
+                "SELECT  Distinct ?s (xsd:dateTime(?issued) as ?date) ?issued ?runTimeMs WHERE {  \n" +
+                " ?s  lsqv:execution ?execution . \n" +
+                "  ?execution purl:issued  ?issued  . \n" +
+                "?s  lsqv:resultSize ?resultSize     .\n" +
+                "\t  ?s  lsqv:runTimeMs ?runTimeMs     .\n" +
+                "\t  ?s  rdf:type ?type     .\n" +
+                "\t  ?s  sp:text ?query     .\n" +
+                "      ?execution <http://lsq.aksw.org/vocab#agent> ?agent .\n" +
+                "}\n" +
+                "\n";
+        Query query = QueryFactory.create(qs) ;
+        QueryExecution exec = QueryExecutionFactory.sparqlService("http://localhost:8890/sparql", query);
+
+        ResultSet results = exec.execSelect();
+        try {
+            BufferedWriter prop_count = new BufferedWriter(new FileWriter("time_features_lsqdbpedia.csv"));
+            StringBuilder sb2 = new StringBuilder();
+            String separator = "ᶶ";
+            sb2.append("id");
+            sb2.append(separator);
+            sb2.append("date");
+            sb2.append(separator);
+            sb2.append("year");
+            sb2.append(separator);
+            sb2.append("month");
+            sb2.append(separator);
+            sb2.append("day");
+            sb2.append(separator);
+            sb2.append("time");
+            sb2.append(separator);
+            sb2.append("runtime");
+            sb2.append(LineSeparator.Unix);
+
+            while (results.hasNext()) {
+                QuerySolution a = results.next();
+                String id = String.valueOf(a.get("s"));
+                sb2.append(id);
+                sb2.append(separator);
+
+                String date = String.valueOf(a.get("date"));
+                sb2.append(date);
+                sb2.append(separator);
+
+                XSDDateTime issued = ((XSDDateTime) a.getLiteral("issued").getValue());
+                int year = issued.getYears();
+                sb2.append(year);
+                sb2.append(separator);
+
+                int month = issued.getMonths();
+                sb2.append(month);
+                sb2.append(separator);
+
+                int day = issued.getDays();
+                sb2.append(day);
+                sb2.append(separator);
+
+                double time = issued.getTimePart();
+                sb2.append(time);
+                sb2.append(separator);
+
+                double runtime = a.getLiteral("runTimeMs").getDouble();
+                sb2.append(runtime);
+                sb2.append(LineSeparator.Unix);
+            }
+            prop_count.write(sb2.toString());
+            prop_count.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

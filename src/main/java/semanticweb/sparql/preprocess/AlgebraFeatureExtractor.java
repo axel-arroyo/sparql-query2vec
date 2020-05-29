@@ -2,6 +2,7 @@ package semanticweb.sparql.preprocess;
 
 import org.apache.commons.collections.map.DefaultedMap;
 import org.apache.jena.query.*;
+import org.apache.jena.sparql.algebra.Algebra;
 import org.apache.jena.sparql.algebra.Op;
 import org.apache.jena.sparql.algebra.OpWalker;
 import org.apache.jena.sparql.algebra.op.*;
@@ -36,9 +37,9 @@ public class AlgebraFeatureExtractor {
     public double[] extractFeatures(String queryStr) {
         Query query = QueryFactory.create(queryStr, Syntax.syntaxARQ);
         // Generate algebra
-//        Op op = Algebra.compile(query);
-        Plan a = QueryExecutionFactory.createPlan(query, DatasetGraphFactory.createTxnMem(), new BindingHashMap());
-        Op op = a.getOp();
+        Op op = Algebra.compile(query);
+//        Plan a = QueryExecutionFactory.createPlan(query, DatasetGraphFactory.createTxnMem(), new BindingHashMap());
+//        Op op = a.getOp();
         if (debug) {
 //            System.out.println("Algebra tree:\n " + a );
         }

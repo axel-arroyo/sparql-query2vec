@@ -12,7 +12,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class Endpoint {
-
     private static Map<String, String> map;
     private static void makeMap(String[] args) {
         map = new HashMap<>();
@@ -70,6 +69,22 @@ public class Endpoint {
 
 
             switch (task){
+                case "create-dataset": {
+                    //test init espaciado top elementosByEspacio
+                    // 0    1    2         3     4
+                    int init = Integer.parseInt(params[1]);
+                    int pad = Integer.parseInt(params[2]);
+                    int top = Integer.parseInt(params[3]);
+                    int limit = Integer.parseInt(params[4]);
+                    String defaultGragh = params.length == 6? params[5]: null;
+                    while (init < top) {
+                        System.out.println("Procesando rango: ".concat(String.valueOf(init).concat("-").concat(String.valueOf(init + pad))));
+                        SparqlUtils.extractDataFromLsq(defaultGragh, params[0], init,init + Integer.parseInt(params[2]), limit);
+                        init += Integer.parseInt(params[2]);
+                    }
+                    break;
+                }
+
                 case "kmedoids": {
                     System.out.println("Entering to kmedoids class");
                     KmedoidsGenerator kmedoidsGenerator = new KmedoidsGenerator();
@@ -92,7 +107,7 @@ public class Endpoint {
                 case "algebra-features": {
                     String inputFile = params[0];
                     String outputFile = params[1];
-                    TDBExecutionAndFeature.produceALgebraFeatures(inputFile, outputFile, configFile, input_delimiter, output_delimiter, idColumn, queryColumn, execTimeColumn);
+                    TDBExecutionAndFeature.produceALgebraFeatures(inputFile, outputFile, configFile, prefixFile, input_delimiter, output_delimiter, idColumn, queryColumn, execTimeColumn);
                     break;
                 }
                 case "predicate-features": {

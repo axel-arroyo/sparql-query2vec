@@ -1,7 +1,9 @@
 package semanticweb.sparql;
 
+import com.sun.org.apache.xml.internal.serialize.LineSeparator;
 import liquibase.util.csv.opencsv.CSVReader;
 import nanoxml.XMLElement;
+import org.apache.jena.datatypes.xsd.XSDDateTime;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.query.*;
@@ -213,6 +215,26 @@ public class SparqlUtils {
             String row;
             while ((row = csvReader.readLine()) != null) {
                 String[] predicates = row.split("\t");
+                model.setNsPrefix(predicates[0], predicates[1]);
+                prefixes = prefixes.concat("PREFIX ").concat(predicates[0]).concat(": ").concat("<").concat(predicates[1]).concat("> \n");
+            }
+            csvReader.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return model;
+    }
+    /**
+     * Get namespaces from file.
+     * @param url File url to extract namespaces
+     * @return Model object of Jena that contains namespaces.
+     */
+    public static Model getNamespacesFromCsv(Model model, String url, String delimiter) {
+        try {
+            BufferedReader csvReader = new BufferedReader(new FileReader(url));
+            String row;
+            while ((row = csvReader.readLine()) != null) {
+                String[] predicates = row.split(delimiter);
                 model.setNsPrefix(predicates[0], predicates[1]);
                 prefixes = prefixes.concat("PREFIX ").concat(predicates[0]).concat(": ").concat("<").concat(predicates[1]).concat("> \n");
             }
@@ -1017,7 +1039,7 @@ public class SparqlUtils {
 	public static ArrayList<String[]> getQueries(String trainingQueryFile, String namespaces_path, ArrayList<Integer> not_include, int idColumn, int queryColumn,int execTimeColumn,char input_delimiter){
 		Model model = ModelFactory.createDefaultModel();
 		if (namespaces_path != null){
-			model = SparqlUtils.getNamespacesDBPed(model, namespaces_path);
+			model = SparqlUtils.getNamespacesFromCsv(model, namespaces_path, String.valueOf(input_delimiter));
 		}
 
 		Map<String, String> pref = model.getNsPrefixMap();
@@ -1077,5 +1099,108 @@ public class SparqlUtils {
         pool.invoke(task2);
 
         String a = "";
+    }
+    /**
+     *
+     * @param defaultGraph
+     * @param output
+     * @param init
+     * @param last
+     * @param limit
+     */
+    public static void extractDataFromLsq(String defaultGraph, String output, int init, int last, int limit ){
+        String qs =
+                "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>" +
+                        "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> " +
+                        "PREFIX lsqr: <http://lsq.aksw.org/res/>  " +
+                        "PREFIX lsqv: <http://lsq.aksw.org/vocab#>  " +
+                        "PREFIX sp: <http://spinrdf.org/sp#>  " +
+                        "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>  " +
+                        "PREFIX purl: <http://purl.org/dc/terms/>  \n" +
+                        "\n" +
+                        "SELECT  Distinct ?s ?execution  ?issued (xsd:dateTime(?issued) as ?date) ?runTimeMs ?resultSize ?query WHERE {  \n" +
+                        " ?s  lsqv:execution ?execution . \n" +
+                        "  ?execution purl:issued  ?issued  . \n" +
+                        "?s  lsqv:resultSize ?resultSize     .\n" +
+                        "\t  ?s  lsqv:runTimeMs ?runTimeMs     .\n" +
+                        "\t  ?s  rdf:type ?type     .\n" +
+                        "\t  ?s  sp:text ?query     .\n" +
+                        "FILTER ( ?runTimeMs >= ".concat(String.valueOf(init)).concat(" && ?runTimeMs < ").concat(String.valueOf(last)).concat("  && ?resultSize >= 0) }\n")
+                                .concat("LIMIT ".concat(String.valueOf(limit)));
+        ARQ.init();
+        Query query = QueryFactory.create(qs) ;
+        QueryExecution exec = QueryExecutionFactory.sparqlService("http://localhost:8890/sparql", query, defaultGraph,null,null);
+
+        ResultSet results = exec.execSelect();
+        try {
+            BufferedWriter prop_count = new BufferedWriter(new FileWriter("qeries_lsq_".concat(output).concat("_").concat(String.valueOf(init).concat("_").concat(String.valueOf(last))).concat(".csv")));
+            StringBuilder sb2 = new StringBuilder();
+            String separator = "ᶶ";
+            /*sb2.append("id");
+            sb2.append(separator);
+            sb2.append("execution");
+            sb2.append(separator);
+            sb2.append("date");
+            sb2.append(separator);
+            sb2.append("year");
+            sb2.append(separator);
+            sb2.append("month");
+            sb2.append(separator);
+            sb2.append("day");
+            sb2.append(separator);
+            sb2.append("time");
+            sb2.append(separator);
+            sb2.append("runtime");
+            sb2.append(LineSeparator.Unix);*/
+            //sᶶexecutionᶶdateᶶyearᶶmonthᶶdayᶶtimeᶶrunTimeMsᶶresultSizeᶶquery
+            while (results.hasNext()) {
+                QuerySolution a = results.next();
+                //?s ?execution  ?issued ?runTimeMs ?resultSize ?query
+                String s = String.valueOf(a.get("s"));
+                sb2.append(s);
+                sb2.append(separator);
+
+                String execution = String.valueOf(a.get("execution"));
+                sb2.append(execution);
+                sb2.append(separator);
+
+                String date = String.valueOf(a.get("date"));
+                sb2.append(date);
+                sb2.append(separator);
+
+                XSDDateTime issued = ((XSDDateTime) a.getLiteral("issued").getValue());
+                int year = issued.getYears();
+                sb2.append(year);
+                sb2.append(separator);
+
+                int month = issued.getMonths();
+                sb2.append(month);
+                sb2.append(separator);
+
+                int day = issued.getDays();
+                sb2.append(day);
+                sb2.append(separator);
+
+                double time = issued.getTimePart();
+                sb2.append(time);
+                sb2.append(separator);
+
+                double runtime = a.getLiteral("runTimeMs").getDouble();
+                sb2.append(runtime);
+                sb2.append(separator);
+
+                double resultSize = a.getLiteral("resultSize").getDouble();
+                sb2.append(resultSize);
+                sb2.append(separator);
+
+                String queryLog = String.valueOf(a.get("query"));
+                sb2.append(queryLog.replaceAll("\t", " ").replaceAll("\r"," ").replaceAll("\n"," "));
+                sb2.append(LineSeparator.Unix);  //Esto porque es el último valor de la fila.
+            }
+            prop_count.write(sb2.toString());
+            prop_count.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

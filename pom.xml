@@ -62,6 +62,59 @@
                     <target>8</target>
                 </configuration>
             </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <configuration>
+                    <shadedArtifactAttached>false</shadedArtifactAttached>
+
+                    <!--
+                      https://issues.apache.org/jira/browse/LOG4J2-954
+                      Multiple Log4j2Plugins.dat
+                      jena-fuseki-server only pick up one Log4j2Plugins.dat (from log4j-core-2.13.2)
+                      No need to run the transformer to merge them.
+                      If it becomes necssary, see: https://github.com/edwgiz/maven-shaded-log4j-transformer
+                    -->
+
+                    <transformers>
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                            <mainClass>endpoint.Endpoint</mainClass>
+                            <!-- https://issues.apache.org/jira/browse/LOG4J2-2537 -->
+                            <manifestEntries>
+                                <Multi-Release>true</Multi-Release>
+                            </manifestEntries>
+                        </transformer>
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer" />
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer">
+                            <addHeader>false</addHeader>
+                        </transformer>
+                    </transformers>
+
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <!-- Some jars are signed but shading breaks that. Don't
+                                  include signing files. -->
+                                <exclude>META-INF/*.SF</exclude>
+                                <exclude>META-INF/*.DSA</exclude>
+                                <exclude>META-INF/*.RSA</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <!--<phase /><!- - Switch off -->
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
     <dependencies>
@@ -77,7 +130,6 @@
             <artifactId>jena-tdb</artifactId>
             <version>3.14.0</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/org.apache.jena/jena-fuseki-main -->
 
         <!-- https://mvnrepository.com/artifact/org.hamcrest/hamcrest-library -->
         <dependency>
@@ -148,6 +200,11 @@
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
             <version>1.2.17</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>1.7.25</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
