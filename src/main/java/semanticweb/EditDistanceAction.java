@@ -41,7 +41,7 @@ public class EditDistanceAction extends RecursiveTask {
                         sb.append(",");
                     }
                     double dist = -1;
-                    if (i == j){
+                    if (i == j) {
                         sb.append(0.0);
                         sb.append(",");
                         continue;
@@ -70,8 +70,10 @@ public class EditDistanceAction extends RecursiveTask {
         try {
             BufferedWriter br = new BufferedWriter(new FileWriter(output + "hungarian_distance" + String.format("%06d", indexStart) + "_" + String.format("%06d", indexLast) + ".csv"));
             br.write(sb.toString());
+            br.close();
             BufferedWriter br2 = new BufferedWriter(new FileWriter(output + "errors" + String.format("%06d", indexStart) + "_" + String.format("%06d", indexLast) + ".txt"));
             br2.write(failed_row_column.toString());
+            br2.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -90,6 +92,9 @@ public class EditDistanceAction extends RecursiveTask {
             int index1Last = index1Start + cantidadByMicro;
             List<EditDistanceAction> dividedTasks = new ArrayList<>();
             for (int i = 0; i < cores; i++) {
+                if (i == cores-1){
+                    index1Last = indexLast;
+                }
                 dividedTasks.add(new EditDistanceAction(queries, output, cores, index1Start, index1Last, true));
                 index1Start = index1Last;
                 index1Last = index1Start + cantidadByMicro;
