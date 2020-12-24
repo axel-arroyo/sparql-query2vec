@@ -4,6 +4,7 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ForkJoinTask;
@@ -11,17 +12,17 @@ import java.util.concurrent.RecursiveTask;
 
 public class EditDistanceAction extends RecursiveTask {
 
-    private ArrayList<Map> queries;
+    private ArrayList<HashMap<String,Object>> queries;
     private int indexStart, indexLast;
-    private boolean recursive;
+    private int elemtByCore;
     private int cores;
     private String output;
 
-    public EditDistanceAction(ArrayList<Map> queries, String output, int cores, int indexStart, int indexLast, boolean recursive) {
+    public EditDistanceAction(ArrayList<HashMap<String,Object>> queries, String output, int cores, int indexStart, int indexLast, int elemtByCore) {
         this.queries = queries;
         this.indexStart = indexStart;
         this.indexLast = indexLast;
-        this.recursive = recursive;
+        this.elemtByCore = elemtByCore;
         this.output = output;
         this.cores = cores;
     }
@@ -81,26 +82,18 @@ public class EditDistanceAction extends RecursiveTask {
 
     @Override
     protected Object compute() {
-        if (recursive) {
+        if (indexLast - indexStart <= elemtByCore) { // Am I able to process it alone?
+            // do the task
             computeSubMatrix(indexStart, indexLast);
             System.out.println("Processed range: "+indexStart+ " - "+indexLast);
         }
-        else {
-            int size = indexLast - indexStart;
-            int cantidadByMicro = size/cores;
-            int index1Start = indexStart;
-            int index1Last = index1Start + cantidadByMicro;
-            List<EditDistanceAction> dividedTasks = new ArrayList<>();
-            for (int i = 0; i < cores; i++) {
-                if (i == cores-1){
-                    index1Last = indexLast;
-                }
-                dividedTasks.add(new EditDistanceAction(queries, output, cores, index1Start, index1Last, true));
-                index1Start = index1Last;
-                index1Last = index1Start + cantidadByMicro;
-
-            }
-            ForkJoinTask.invokeAll(dividedTasks);
+        else { // split too big task
+            int halfAmount = ((indexLast - indexStart) / 2) + indexStart;
+            EditDistanceAction leftTask = new EditDistanceAction(queries, output, cores, indexStart, halfAmount, elemtByCore);
+            leftTask.fork(); // add left task to the queue
+            EditDistanceAction rightTask = new EditDistanceAction(queries, output, cores, halfAmount, indexLast, elemtByCore);
+            rightTask.compute(); // work on right task, this is a recursive call
+            leftTask.join(); // wait for queued task to be completed
         }
         return null;
     }

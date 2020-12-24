@@ -16,8 +16,8 @@ public class KmedoidsGenerator {
         BufferedReader csvReader;
         String row;
         double[][] arrayList = new double[0][];
+        boolean first =true;
         ArrayList<HashMap<String,String>> idTimeVals = new ArrayList<>();
-        boolean first = true;
         try {
             csvReader = new BufferedReader(new FileReader(url));
             int i = 0;
@@ -65,11 +65,11 @@ public class KmedoidsGenerator {
         return  new Array2DRowRealMatrix(doubles);
     }
 
-    public void proccessQueries(String[] args,int k, String input_delimiter, char output_delimiter, int idColumn, int execTimeColumn){
+
+    public void proccessQueries(String[] args,int k, String input_delimiter, char output_delimiter, int idColumn, int execTimeColumn, boolean withHeader){
         System.out.println("Inside");
         String input = "";
         String output = "";
-        String indexesFile = "";
         try {
             input = args[0];
         }
@@ -84,7 +84,7 @@ public class KmedoidsGenerator {
             System.out.println("You need to specify the output URL as the second parameter");
             return;
         }
-        HashMap<String,Object> data = getArrayFromCsvFile(input, input_delimiter,idColumn,execTimeColumn);
+        HashMap<String,Object> data = getArrayFromCsvFile(input, input_delimiter, idColumn, execTimeColumn);
         ArrayList<HashMap<String,String>> idTime = (ArrayList<HashMap<String, String>>) data.get("idTime");
         double[][] distances = (double[][]) data.get("arrayData");
 //        ArrayList<String[]> ids_time = SparqlUtils.getArrayFromCsvFile(indexesFile);
@@ -106,45 +106,60 @@ public class KmedoidsGenerator {
         List<Integer> centroidList = new ArrayList<>();
 
         ArrayList<double[]> centroids = km.getCentroids();
-        for (int i = 0; i < km.getCentroids().size(); i++) {
-            centroidList.add((int) centroids.get(i)[0]);
-        }
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sbcentroids = new StringBuilder();
+        BufferedWriter brcentroids;
 
-        BufferedWriter br;
+            for (int i = 0; i < km.getCentroids().size(); i++) {
+                int centroid = (int) centroids.get(i)[0];
+                centroidList.add(centroid);
+                sbcentroids.append(idTime.get(centroid).get("id"));
+                sbcentroids.append("\n");
+            }
         try {
-            br = new BufferedWriter(new FileWriter(output));
-            //Write header
-            sb.append("id");
-            sb.append(output_delimiter);
-            for (int i = 0; i < k; i++) {
-                sb.append("pcs").append(i);
-                sb.append(output_delimiter);
-            }
-            sb.append("time");
-            sb.append("\n");
-            for (int i = 0; i < distances.length; i++) {
-                sb.append(idTime.get(i).get("id"));
-                sb.append(output_delimiter);
-                for (int j = 0; j < centroidList.size(); j++) {
-
-                    int currentCentroid = centroidList.get(j);
-                    double distance = distances[i][currentCentroid];
-                    double similarity = 1 / (1+ distance);
-                    sb.append(similarity);
-                    sb.append(output_delimiter);
-                }
-                sb.append(idTime.get(i).get("time"));
-                sb.append("\n");
-            }
-            br.write(sb.toString());
-            br.close();
-            System.out.println("Medoids vectors computed, output writed in :" + output);
+            brcentroids = new BufferedWriter(new FileWriter(output.concat(".centroids.txt")));
+            brcentroids.write(sbcentroids.toString());
+            brcentroids.close();
+            System.out.println("Centroids saved on ".concat(output.concat(".centroids.txt")));
+        }catch (Exception ex){
+            ex.printStackTrace();
         }
-        catch (Exception ex){
-            System.out.println("Something was wrong in the writing process of the output");
-
-        }
+//        StringBuilder sb = new StringBuilder();
+//
+//        BufferedWriter br;
+//        try {
+//            br = new BufferedWriter(new FileWriter(output));
+//            //Write header
+//            sb.append("id");
+//            sb.append(output_delimiter);
+//            for (int i = 0; i < k; i++) {
+//                sb.append("pcs").append(i);
+//                sb.append(output_delimiter);
+//            }
+//            sb.append("time");
+//            sb.append("\n");
+//            for (int i = 0; i < distances.length; i++) {
+//                sb.append(idTime.get(i).get("id"));
+//                sb.append(output_delimiter);
+//                for (int j = 0; j < centroidList.size(); j++) {
+//
+//                    int currentCentroid = centroidList.get(j);
+//                    double distance = distances[i][currentCentroid];
+//                    double similarity = 1 / (1+ distance);
+//                    sb.append(similarity);
+//                    sb.append(output_delimiter);
+//                }
+//                sb.append(idTime.get(i).get("time"));
+//                sb.append("\n");
+//            }
+//            br.write(sb.toString());
+//            br.close();
+//            System.out.println("Medoids vectors computed, output writed in :" + output);
+//        }
+//        catch (Exception ex){
+//            ex.printStackTrace();
+//            System.out.println("Something was wrong in the writing process of the output");
+//
+//        }
     }
 
     public static int[] makeSequence(int end) {

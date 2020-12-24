@@ -2,6 +2,7 @@ package semanticweb.sparql.preprocess;
 
 import org.apache.jena.query.*;
 import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.impl.LiteralImpl;
 import org.apache.jena.sparql.algebra.Algebra;
@@ -44,16 +45,14 @@ public class ReinforcementLearningExtractor extends FeaturesExtractorBase {
                                                                  String input_delimiter,
                                                                  String output_element_delimiter) {
 
-        if (!namespaces.equals("")) {
-            model = SparqlUtils.getNamespacesDBPed(namespaces);
-        }
         ArrayList<Map<String, Object>> vectors = new ArrayList<>();
 
-        ArrayList<ArrayList<String>> featInQueryList = this.getArrayQueriesMetaFromCsv(urlQueries, true, input_delimiter, queryColumn, idColumn, execTimeColumn, length);
+        ArrayList<String[]> featInQueryList = SparqlUtils.getQueries(urlQueries, namespaces , new ArrayList<>(), idColumn, queryColumn, execTimeColumn, input_delimiter.toCharArray()[0]);
+
         //we use the size of array intead of -1(csv header) because we use extra column called others.
         HashMap<String, PredHistogram> predicatesToHist = new HashMap<>();
         int indexPredJoins = 0;
-        for (ArrayList<String> queryArr : featInQueryList) {
+        for (String[] queryArr : featInQueryList) {
             try {
                 RLQueryFeatureExtractor qfe = new RLQueryFeatureExtractor(queryArr);
                 Map<String, Object> queryVecData = qfe.getProcessedData();
@@ -100,20 +99,20 @@ public class ReinforcementLearningExtractor extends FeaturesExtractorBase {
 
     public HashMap<String, PredHistogram> addQueryHistToCollection(HashMap<String, PredHistogram> queriesToHist, HashMap<String, PredHistogram> globalHistCollection) {
         String[] histCurr = (String[]) queriesToHist.keySet().toArray(new String[0]);
-        for (int i = 0; i < histCurr.length; i++) {
-            PredHistogram predHistCurr = queriesToHist.get(histCurr[i]);
-            if (globalHistCollection.containsKey(histCurr[i])) {
-                PredHistogram globalHist = globalHistCollection.get(histCurr[i]);
+        for (String s : histCurr) {
+            PredHistogram predHistCurr = queriesToHist.get(s);
+            if (globalHistCollection.containsKey(s)) {
+                PredHistogram globalHist = globalHistCollection.get(s);
 
                 if (predHistCurr.getOnSubQuery() != null) {
-                    globalHist.setQuery("sub", predHistCurr.getOnSubType(),predHistCurr.getOnSubQuery());
+                    globalHist.setQuery("sub", predHistCurr.getOnSubType(), predHistCurr.getOnSubQuery());
                 }
                 if (predHistCurr.getOnObjQuery() != null) {
                     globalHist.setQuery("obj", predHistCurr.getOnObjType(), predHistCurr.getOnObjQuery());
                 }
-                globalHistCollection.put(histCurr[i], globalHist);
+                globalHistCollection.put(s, globalHist);
             } else {
-                globalHistCollection.put(histCurr[i], predHistCurr);
+                globalHistCollection.put(s, predHistCurr);
             }
         }
         return globalHistCollection;
@@ -188,7 +187,7 @@ public class ReinforcementLearningExtractor extends FeaturesExtractorBase {
                                         sb.append(output_element_delimiter);
                                         sb.append(elementColOpCard.get("on"));
                                         sb.append(output_element_delimiter);
-                                        sb.append(String.valueOf(elementColOpCard.get("value")));
+                                        sb.append(elementColOpCard.get("value"));
                                         sb.append(output_element_delimiter);
                                     }
                                 } catch (Exception ex) {
@@ -251,14 +250,14 @@ public class ReinforcementLearningExtractor extends FeaturesExtractorBase {
         }
     }
 
-    public void executeSamplingHist(String url, String output, String output_delimiter, String input_delimiter, String output_element_delimiter) {
+    public void executeSamplingHist(String url, String output, String output_delimiter, String input_delimiter, String output_element_delimiter, String prefixFile) {
         ArrayList<String[]> arrays = SparqlUtils.getArrayFromCsvFile(url, input_delimiter);
         HashMap<String, PredHistogram> predToHistEvaluated = new HashMap<>();
-        for (int i = 0; i < arrays.size(); i++) {
-            String key = arrays.get(i)[0];
-            String targetType = arrays.get(i)[1];
-            String on = arrays.get(i)[2];
-            String queryString = arrays.get(i)[3];
+        for (String[] array : arrays) {
+            String key = array[0];
+            String targetType = array[1];
+            String on = array[2];
+            String queryString = array[3];
 
             Query query = QueryFactory.create(String.valueOf(queryString));
 
@@ -292,18 +291,16 @@ public class ReinforcementLearningExtractor extends FeaturesExtractorBase {
                     String valString = val.toString().split("\\^\\^")[0];
                     if (values.containsKey(valString)) {
                         values.put(valString, values.get(valString) + 1);
-                    }
-                    else {
+                    } else {
                         values.put(valString, 1.0);
                     }
                 }
             }
-            if (predToHistEvaluated.containsKey(key)){
+            if (predToHistEvaluated.containsKey(key)) {
                 PredHistogram predHistogram = predToHistEvaluated.get(key);
-                predHistogram.setValuesHist(on,targetType,values);
-                predToHistEvaluated.put(key,predHistogram);
-            }
-            else {
+                predHistogram.setValuesHist(on, targetType, values);
+                predToHistEvaluated.put(key, predHistogram);
+            } else {
                 PredHistogram predHistogram = new PredHistogram(targetType, on, values, key);
                 predToHistEvaluated.put(key, predHistogram);
             }

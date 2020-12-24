@@ -21,7 +21,7 @@ public class TDBExecutionAndFeature {
 	private int idColumn,  queryColumn, execTimeColumn;
 	private Model model;
 	private boolean directTDB = false;
-	
+
 	public TDBExecutionAndFeature() throws IOException {
 		prop = new Properties();
 		prop.load(new FileInputStream(ProjectConfiguration.CONFIG_FILE));
@@ -238,7 +238,10 @@ public class TDBExecutionAndFeature {
 	private void generateAlgebraFeatureDataset() throws IOException {
 		this.trainingQueries = SparqlUtils.getQueries(inputQueryFile, prop.getProperty("Namespaces"), new ArrayList<>(), this.idColumn, this.queryColumn,this.execTimeColumn,this.input_delimiter.toCharArray()[0]);
 
-		String[] header = ProjectConfiguration.getAlgebraFeatureHeader(prop.getProperty("FeaturesList"));
+		String[] header = new String[]{
+				"triple", "bgp", "join", "leftjoin", "union", "filter", "graph", "extend", "minus", "path*",
+				"pathN*", "path+", "pathN+", "path?", "notoneof", "tolist", "order", "project", "distinct", "reduced",
+				"multi", "top", "group", "assign", "sequence", "slice", "treesize"};
 		generateAlgebraFeatures(this.outputFile, header, this.trainingQueries);
 		System.out.println("Precess finished.");
 	}

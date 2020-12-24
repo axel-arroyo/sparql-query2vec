@@ -1,24 +1,31 @@
 package semanticweb.sparql;
 
-import com.sun.org.apache.xml.internal.serialize.LineSeparator;
 import liquibase.util.csv.opencsv.CSVReader;
 import nanoxml.XMLElement;
+import org.apache.commons.io.IOUtils;
 import org.apache.jena.datatypes.xsd.XSDDateTime;
 import org.apache.jena.graph.Node;
+import org.apache.jena.graph.NodeFactory;
+import org.apache.jena.graph.Node_URI;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.query.*;
 import org.apache.jena.rdf.model.*;
+import org.apache.jena.sparql.algebra.Algebra;
 import org.apache.jena.sparql.core.TriplePath;
+import org.apache.jena.sparql.function.library.triple.TriplePredicate;
+import org.apache.jena.sparql.path.P_Seq;
 import org.apache.jena.sparql.syntax.*;
 import semanticweb.EditDistanceAction;
 import semanticweb.GraphBuildAction;
 import semanticweb.RDF2GXL;
+import semanticweb.RDFGraphMatching;
 import util.Graph;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ForkJoinPool;
+import java.util.stream.Collectors;
 
 public class SparqlUtils {
 
@@ -223,6 +230,10 @@ public class SparqlUtils {
             e.printStackTrace();
         }
         return model;
+    }
+    public static Model getNamespacesFromCsv( String url, String delimiter) {
+        Model model = ModelFactory.createDefaultModel();
+        return getNamespacesFromCsv(model, url, delimiter);
     }
     /**
      * Get namespaces from file.
@@ -573,7 +584,14 @@ public class SparqlUtils {
                         Iterator<TriplePath> triples = el.patternElts();
                         while (triples.hasNext()) {
                             TriplePath t = triples.next();
-                            allTriples.add(t.asTriple());
+                            Triple triple = t.asTriple();
+                            if (triple == null){
+                                //Es que no es instancia de 1-Link
+//                                if (t.getPath() instanceof P_Seq){
+                                    triple = Triple.create(t.getSubject(), NodeFactory.createURI(t.getPath().toString()),t.getObject());
+//                                }
+                            }
+                            allTriples.add(triple);
                         }
                     }
 
@@ -1037,7 +1055,8 @@ public class SparqlUtils {
         return queries;
     }
 	public static ArrayList<String[]> getQueries(String trainingQueryFile, String namespaces_path, ArrayList<Integer> not_include, int idColumn, int queryColumn,int execTimeColumn,char input_delimiter){
-		Model model = ModelFactory.createDefaultModel();
+		System.out.println("Reading Queries..");
+        Model model = ModelFactory.createDefaultModel();
 		if (namespaces_path != null){
 			model = SparqlUtils.getNamespacesFromCsv(model, namespaces_path, String.valueOf(input_delimiter));
 		}
@@ -1052,7 +1071,12 @@ public class SparqlUtils {
 			InputStreamReader csv = new InputStreamReader(new FileInputStream(trainingQueryFile));
 			CSVReader csvReader = new CSVReader (csv,input_delimiter);
 			String[] record;
+
 			while ((record = csvReader.readNext()) != null) {
+			    if(record.length < 3){
+			        //no es una tupla válida
+			        continue;
+                }
 				if (header){
 					header = false;
 					continue;
@@ -1078,30 +1102,141 @@ public class SparqlUtils {
 				}
 				query  = prefixesStr.concat(" " +query);
 				//Pos in [0] refer to the ID of query in logs.
-				String[] curr = new String[]{id, query, execTime};
-				queries.add(curr);
+                try {
+                    Query queryObj = QueryFactory.create(query, Syntax.syntaxARQ);
+
+                    // Generate algebra
+                    Algebra.compile(queryObj);
+
+
+                    String[] curr = new String[]{id, query, execTime};
+                    queries.add(curr);
+                }
+                catch (Exception exception){
+                    exception.printStackTrace();
+                    System.out.println("Error leyendo query: ".concat(query).concat(" :<end>"));
+                    continue;
+                }
+
 			}
 		}
 		catch (IOException e) {
 			e.printStackTrace();
 		}
-		return  queries;
+        System.out.println("Queries readed!");
+        return  queries;
 	}
 
-    public void calculateEditDistance(String input, String output, String prefixFile, int cores, char input_delimiter, char output_delimiter, int idColumn, int queryColumn, int execTimeColumn) {
+    public void calculateEditDistance(String input, String output, String prefixFile, int cores, char input_delimiter, char output_delimiter, int idColumn, int queryColumn, int execTimeColumn, int elemtByCore) {
         ArrayList<String[]> queries = SparqlUtils.getQueries(input, prefixFile, new ArrayList<>(), idColumn, queryColumn, execTimeColumn, input_delimiter);
 
-		ForkJoinPool pool = new ForkJoinPool();
+        System.out.println("Creating Query graphs..");
+        ForkJoinPool pool = new ForkJoinPool();
+//        GraphBuildAction task = new GraphBuildAction(queries, 0, 50);
         GraphBuildAction task = new GraphBuildAction(queries, 0, queries.size());
-        ArrayList<Map> grafos = pool.invoke(task);
-
-        EditDistanceAction task2 = new EditDistanceAction(grafos, output, cores, 0, grafos.size(), false);
+        ArrayList<HashMap<String, Object>> grafos = pool.invoke(task);
+        System.out.println("Query graphs created" + grafos.size());
+        EditDistanceAction task2 = new EditDistanceAction(grafos, output, cores, 0, grafos.size(), elemtByCore);
         pool.invoke(task2);
 
         String a = "";
     }
+    
+    private String getGraphPatternByQuery(String[] query, HashMap<String,Graph> medoids, Character output_delimiter){
+        Iterator<Map.Entry<String, Graph>> iterator = medoids.entrySet().iterator();
+
+        StringBuilder stringBuilder = new StringBuilder();
+        try {
+            Graph Gi = SparqlUtils.buildSPARQL2GXLGraph(query[1],  "row_"+ query[0]);
+            stringBuilder.append(query[0]).append(output_delimiter);
+            stringBuilder.append(query[2]);
+            RDFGraphMatching matcher = new RDFGraphMatching();
+            while (iterator.hasNext()) {
+                Map.Entry<String, Graph> mapElement = iterator.next();
+                Graph centroid = ((Graph)mapElement.getValue());
+                double dist = matcher.distanceBipartiteHungarian(Gi, centroid);
+                stringBuilder.append(output_delimiter);
+                double similarity = 1 / (1+ dist);
+                stringBuilder.append(similarity);
+            }
+            stringBuilder.append("\n");
+            return stringBuilder.toString();
+        }
+        catch (Exception ex){
+            ex.printStackTrace();
+        }
+        return null;
+    }
+    public void getGraphPatterns(String input, String output, String modeidsFile, String prefixFile, char input_delimiter, char output_delimiter, int idColumn, int queryColumn, int execTimeColumn) {
+        ArrayList<String[]> queries = SparqlUtils.getQueries(input, prefixFile, new ArrayList<>(), idColumn, queryColumn, execTimeColumn, input_delimiter);
+        System.out.println("Queries readed: ".concat(String.valueOf(queries.size())).concat(" in total."));
+        ArrayList<String> medoidsId = new ArrayList<>();
+        HashMap<String,Graph> medoidsMap = new HashMap<>();
+        BufferedReader reader;
+        try {
+            reader = new BufferedReader(new FileReader(modeidsFile));
+            String line = reader.readLine();
+            while (line != null) {
+                System.out.println(line);
+                medoidsId.add(line.replaceAll("\\s+",""));
+                line = reader.readLine();
+            }
+            reader.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        for (String[] query : queries) {
+            int index = medoidsId.indexOf(query[idColumn].replaceAll("\\s+",""));
+            if (index >= 0) {
+                try {
+                    Graph Gi = SparqlUtils.buildSPARQL2GXLGraph(query[1],  "row_"+ query[0]);
+                    medoidsMap.put(query[idColumn], Gi);
+                }
+                catch (Exception ex){
+                    ex.printStackTrace();
+                }
+
+            }
+        }
+        if(medoidsMap.size() != medoidsId.size()){
+            System.out.println("Some Medoids not finded!!! :(");
+            return;
+        }
+        System.out.println("Moedoids readed: ".concat(String.valueOf(medoidsId.size())).concat(" in total."));
+        System.out.println("Creating Query graphs..");
+        
+        List<String> results = queries.parallelStream()
+                .map(i -> getGraphPatternByQuery(i, medoidsMap, output_delimiter)) // each operation takes one second
+                .collect(Collectors.toList());
+        StringBuilder sb = new StringBuilder();
+//
+        BufferedWriter br;
+        try {
+            br = new BufferedWriter(new FileWriter(output));
+            //Write header
+            sb.append("id").append(output_delimiter);
+            sb.append("time");
+            for (int i = 0; i < medoidsId.size(); i++) {
+                sb.append(output_delimiter);
+                sb.append("pcs").append(i);
+            }
+            sb.append("\n");
+            for (String result : results) {
+                sb.append(result);
+                sb.append("\n");
+            }
+            br.write(sb.toString());
+            br.close();
+            System.out.println("Medoids vectors computed, output writed in :" + output);
+        }
+        catch (Exception ex){
+            ex.printStackTrace();
+            System.out.println("Something was wrong in the writing process of the output");
+
+        }
+    }
     /**
-     *
+     *aw
      * @param defaultGraph
      * @param output
      * @param init
@@ -1195,7 +1330,7 @@ public class SparqlUtils {
 
                 String queryLog = String.valueOf(a.get("query"));
                 sb2.append(queryLog.replaceAll("\t", " ").replaceAll("\r"," ").replaceAll("\n"," "));
-                sb2.append(LineSeparator.Unix);  //Esto porque es el último valor de la fila.
+                sb2.append(IOUtils.LINE_SEPARATOR_UNIX);  //Esto porque es el último valor de la fila.
             }
             prop_count.write(sb2.toString());
             prop_count.close();

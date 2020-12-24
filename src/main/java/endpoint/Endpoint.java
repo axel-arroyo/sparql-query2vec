@@ -2,10 +2,7 @@ package endpoint;
 
 import semanticweb.sparql.KmedoidsGenerator;
 import semanticweb.sparql.SparqlUtils;
-import semanticweb.sparql.preprocess.DeepSetFeatureExtractor;
-import semanticweb.sparql.preprocess.RecurrentFeaturesExtractor;
-import semanticweb.sparql.preprocess.ReinforcementLearningExtractor;
-import semanticweb.sparql.preprocess.TDBExecutionAndFeature;
+import semanticweb.sparql.preprocess.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -52,6 +49,8 @@ public class Endpoint {
         try {
             String task = args[0];
             //Define parameters from args
+            boolean withHeader = map.get("--with-header") != null && !map.get("--with-header").equals("false");
+            boolean withTimeFeatures = map.get("--with-timefeatures") != null && !map.get("--with-timefeatures").equals("false");
             int medoids =  map.get("--medoids")  != null ? Integer.parseInt(map.get("--medoids")) : 25;
             String configFile =  map.get("--config-file")  != null ? map.get("--config-file") : "";
             String urlTFPMap =  map.get("--tpf-map-file")  != null ? map.get("--tpf-map-file") : "";
@@ -61,6 +60,7 @@ public class Endpoint {
             int queryColumn =  map.get("--queryColumn")  != null ? Integer.parseInt(map.get("--queryColumn")) : 1;
             int cores =  map.get("--cores")  != null ? Integer.parseInt(map.get("--cores")) : 0;
             int length = map.get("--length") != null ? Integer.parseInt(map.get("--length")): 0;
+            int elemtByCore = map.get("--elements-by-core") != null ? Integer.parseInt(map.get("--elements-by-core")): 500;
             String output_delimiter = map.get("--output-delimiter") != null ? map.get("--output-delimiter"): ",";
             //Delimitador de elementos dentro de una columna, la coma no es buena debido a que existen uris con coma.
             String output_element_delimiter = map.get("--output-element-delimiter") != null ? map.get("--output-element-delimiter"): "ᶷ";
@@ -77,18 +77,68 @@ public class Endpoint {
                     int top = Integer.parseInt(params[3]);
                     int limit = Integer.parseInt(params[4]);
                     String defaultGragh = params.length == 6? params[5]: null;
+                    int count = 0;
                     while (init < top) {
                         System.out.println("Procesando rango: ".concat(String.valueOf(init).concat("-").concat(String.valueOf(init + pad))));
                         SparqlUtils.extractDataFromLsq(defaultGragh, params[0], init,init + Integer.parseInt(params[2]), limit);
                         init += Integer.parseInt(params[2]);
+                        count++;
+                        if(count == 5){
+                            count = 0;
+                            Thread.sleep(2000);
+                        }
                     }
                     break;
                 }
-
+//                case "tsv2csv": {
+//                    String inputLogsFile = params[0];
+//                    String inputHdtFile = params[1];
+//                    String outputFile = params[2];
+//                    RunQueriesParallel runQueriesParallel = new RunQueriesParallel(inputLogsFile, inputHdtFile, outputFile,  prefixFile,  output_delimiter, cores);
+////                    "/home/daniel/Documentos/ML/rhassan/graph-edit-distance/wikidata_prefixes.csv"
+//                    ArrayList<String[]> queries = runQueriesParallel.createCsvFromTsv(0,'ᶶ','\t');
+////                    runQueriesParallel.proccessData();
+//                    break;
+//                }
+//                case "create-query-dataset-parallel": {
+//                    String inputLogsFile = params[0];
+//                    String inputHdtFile = params[1];
+//                    String outputFile = params[2];
+//                    int init_row = Integer.parseInt(params[3]);
+//                    int len_exec_results = Integer.parseInt(params[4]);
+//                    String endpoint = params[5];
+//                    RunQueriesParallel runQueriesParallel = new RunQueriesParallel(inputLogsFile, inputHdtFile, outputFile,  prefixFile, init_row, len_exec_results, output_delimiter, cores);
+////                    "/home/daniel/Documentos/ML/rhassan/graph-edit-distance/wikidata_prefixes.csv"
+//                    runQueriesParallel.proccessData(endpoint);
+////                    runQueriesParallel.proccessData();
+//                    break;
+//                }
+                case "execute-queries": {
+                    //java -jar inputTDBUrl inputLogsFile outputFile
+                    String inputTDBUrl = params[0];
+                    String inputLogsFile = params[1];
+                    String outputFile = params[2];
+                    int init_row = Integer.parseInt(params[3]);
+                    int len_exec_results = Integer.parseInt(params[4]);
+                    RunQueriesSequential runner = new RunQueriesSequential(inputLogsFile, inputTDBUrl, outputFile,  prefixFile, init_row, len_exec_results, output_delimiter,idColumn, queryColumn);
+                    runner.proccessData2("ᶶ",input_delimiter.charAt(0));
+                    break;
+                }
+//                case "create-query-dataset": {
+//                    String inputLogsFile = params[0];
+//                    String inputHdtFile = params[1];
+//                    String outputFile = params[2];
+//                    int init_row = Integer.parseInt(params[3]);
+//                    int len_exec_results = Integer.parseInt(params[4]);
+//                    String endpoint = params[5];
+//                    RunQueriesParallel runQueriesParallel = new RunQueriesParallel(inputLogsFile, inputHdtFile, outputFile,  prefixFile, init_row, len_exec_results, output_delimiter, cores);
+////                    runQueriesParallel.proccessData2(endpoint, "ᶶ",'\t');
+//                    break;
+//                }
                 case "kmedoids": {
                     System.out.println("Entering to kmedoids class");
                     KmedoidsGenerator kmedoidsGenerator = new KmedoidsGenerator();
-                    kmedoidsGenerator.proccessQueries(params, medoids, input_delimiter, output_delimiter.toCharArray()[0], idColumn, execTimeColumn);
+                    kmedoidsGenerator.proccessQueries(params, medoids, input_delimiter, output_delimiter.toCharArray()[0], idColumn, execTimeColumn, withHeader);
                     break;
                 }
                 case "edit-distance": {
@@ -101,7 +151,23 @@ public class Endpoint {
                         System.out.println("args[0] : Input csv \n args[1] : Output path \n");
                         return;
                     }
-                    sparqlUtils.calculateEditDistance(input, output, prefixFile, cores, input_delimiter.toCharArray()[0], output_delimiter.toCharArray()[0], idColumn, queryColumn, execTimeColumn);
+                    sparqlUtils.calculateEditDistance(input, output, prefixFile.equals("") ? null : prefixFile, cores, input_delimiter.toCharArray()[0], output_delimiter.toCharArray()[0], idColumn, queryColumn, execTimeColumn, elemtByCore);
+                    break;
+                }
+                case "graph-patterns": {
+                    //Compute edit distances only with a list of medoids ids file and output the graph pattern.
+                    SparqlUtils sparqlUtils = new SparqlUtils();
+                    String input, output, modeidsFile;
+                    try {
+                        input = params[0];
+                        output = params[1];
+                        modeidsFile = params[2];
+
+                    } catch (Exception ex) {
+                        System.out.println("args[0] : Input csv \n args[1] : Output path \n");
+                        return;
+                    }
+                    sparqlUtils.getGraphPatterns(input, output, modeidsFile, prefixFile.equals("") ? null : prefixFile, input_delimiter.toCharArray()[0], output_delimiter.toCharArray()[0], idColumn, queryColumn, execTimeColumn);
                     break;
                 }
                 case "algebra-features": {
@@ -147,7 +213,7 @@ public class Endpoint {
                 }
                 case "execute-sampling-hist": {
                     ReinforcementLearningExtractor rpfv = new ReinforcementLearningExtractor();
-                    rpfv.executeSamplingHist(params[0], params[1], output_delimiter, input_delimiter, output_element_delimiter);
+                    rpfv.executeSamplingHist(params[0], params[1], output_delimiter, input_delimiter, output_element_delimiter, prefixFile);
                     break;
                 }
                 default: {

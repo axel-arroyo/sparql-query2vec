@@ -49,24 +49,24 @@ public class OperatorsQueryVisitor  extends OpVisitorBase {
     }
 
     public void visit(OpJoin opJoin) {
-        System.out.println("join ");
+//        System.out.println("join ");
         features[featureIndex.get("join")] += 1.0;
     }
 
     public void visit(OpLeftJoin opleftJoin) {
-        System.out.println("leftjoin ");
+//        System.out.println("leftjoin ");
         features[featureIndex.get("leftjoin")] += 1.0;
 
     }
 
     public void visit(OpUnion opUnion) {
-        System.out.println("union ");
+//        System.out.println("union ");
         features[featureIndex.get("union")] += 1.0;
 
     }
 
     public void visit(OpFilter opFilter) {
-        System.out.println("filter ");
+//        System.out.println("filter ");
         features[featureIndex.get("filter")] += 1.0;
     }
 
@@ -168,21 +168,21 @@ public class OperatorsQueryVisitor  extends OpVisitorBase {
 
     public void visit(OpGroup opGroup) {
 
-        System.out.println("group ");
+//        System.out.println("group ");
         features[featureIndex.get("group")] += 1.0;
 
     }
 
     public void visit(OpAssign opAssign) {
 
-        System.out.println("assign ");
+//        System.out.println("assign ");
         features[featureIndex.get("assign")] += 1.0;
 
     }
 
     public void visit(OpSequence opSequence) {
 
-        System.out.println("sequence ");
+//        System.out.println("sequence ");
         features[featureIndex.get("sequence")] += 1.0;
 
     }

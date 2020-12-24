@@ -28,32 +28,32 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>2.6</version>
-                <configuration>
-                    <appendAssemblyId>
-                        false
-                    </appendAssemblyId>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
-                    <archive>
-                        <manifest>
-                            <mainClass>endpoint.Endpoint</mainClass>
-                        </manifest>
-                    </archive>
-                </configuration>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
+<!--            <plugin>-->
+<!--                <groupId>org.apache.maven.plugins</groupId>-->
+<!--                <artifactId>maven-assembly-plugin</artifactId>-->
+<!--                <version>2.6</version>-->
+<!--                <configuration>-->
+<!--                    <appendAssemblyId>-->
+<!--                        false-->
+<!--                    </appendAssemblyId>-->
+<!--                    <descriptorRefs>-->
+<!--                        <descriptorRef>jar-with-dependencies</descriptorRef>-->
+<!--                    </descriptorRefs>-->
+<!--                    <archive>-->
+<!--                        <manifest>-->
+<!--                            <mainClass>endpoint.Endpoint</mainClass>-->
+<!--                        </manifest>-->
+<!--                    </archive>-->
+<!--                </configuration>-->
+<!--                <executions>-->
+<!--                    <execution>-->
+<!--                        <phase>package</phase>-->
+<!--                        <goals>-->
+<!--                            <goal>single</goal>-->
+<!--                        </goals>-->
+<!--                    </execution>-->
+<!--                </executions>-->
+<!--            </plugin>-->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -62,7 +62,6 @@
                     <target>8</target>
                 </configuration>
             </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -117,18 +116,46 @@
             </plugin>
         </plugins>
     </build>
+    <repositories>
+        <repository>
+            <id>org.rdfhdt</id>
+            <url>git://github.com/rdfhdt/hdt-java.git</url>
+        </repository>
+    </repositories>
+
     <dependencies>
+<!--        <dependency>-->
+<!--            <groupId>org.rdfhdt</groupId>-->
+<!--            <artifactId>hdt-java-core</artifactId>-->
+<!--            <version>2.1-SNAPSHOT</version>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>org.rdfhdt</groupId>-->
+<!--            <artifactId>hdt-java-cli</artifactId>-->
+<!--            <version>2.1-SNAPSHOT</version>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>org.rdfhdt</groupId>-->
+<!--            <artifactId>hdt-jena</artifactId>-->
+<!--            <version>2.1-SNAPSHOT</version>-->
+<!--        </dependency>-->
+
+<!--        <dependency>-->
+<!--            <groupId>org.rdfhdt</groupId>-->
+<!--            <artifactId>hdt-api</artifactId>-->
+<!--            <version>2.1-SNAPSHOT</version>-->
+<!--        </dependency>-->
         <!-- https://mvnrepository.com/artifact/org.apache.jena/apache-jena-libs -->
         <dependency>
             <groupId>org.apache.jena</groupId>
             <artifactId>apache-jena-libs</artifactId>
-            <version>3.14.0</version>
+            <version>3.16.0-SNAPSHOT</version>
             <type>pom</type>
         </dependency>
         <dependency>
             <groupId>org.apache.jena</groupId>
             <artifactId>jena-tdb</artifactId>
-            <version>3.14.0</version>
+            <version>3.16.0-SNAPSHOT</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.hamcrest/hamcrest-library -->
@@ -211,7 +238,14 @@
             <artifactId>commons-lang3</artifactId>
             <version>3.10</version>
         </dependency>
+        <dependency>
+        <groupId>com.pivovarit</groupId>
+        <artifactId>parallel-collectors</artifactId>
+        <version>2.3.3</version>
+    </dependency>
     </dependencies>
+
+
     <distributionManagement>
         <repository>
             <id>github</id>

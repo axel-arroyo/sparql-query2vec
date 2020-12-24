@@ -5,6 +5,7 @@ import java.util.Enumeration;
 import java.util.Vector;
 
 import org.apache.jena.rdf.model.*;
+import org.apache.jena.riot.system.stream.StreamManager;
 import org.apache.jena.util.FileManager;
 import util.Edge;
 import util.Graph;
@@ -301,7 +302,7 @@ public class RDF2GXL {
 		 Model model = ModelFactory.createDefaultModel();
 
 		 // use the FileManager to find the input file
-		InputStream in = FileManager.get().open( filename );
+		InputStream in = StreamManager.get().open( filename );
 		if (in == null) {
 		    throw new IllegalArgumentException(
 		                                 "File: " + filename + " not found");

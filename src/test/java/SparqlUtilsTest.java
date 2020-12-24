@@ -1,11 +1,7 @@
-import com.sun.org.apache.xml.internal.serialize.LineSeparator;
-import org.apache.jena.datatypes.xsd.XSDDateTime;
 import org.apache.jena.datatypes.xsd.impl.XSDBaseNumericType;
-import org.apache.jena.datatypes.xsd.impl.XSDDateTimeStampType;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.query.*;
-import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.sparql.algebra.Algebra;
 import org.apache.jena.sparql.algebra.Op;
 import org.apache.jena.sparql.core.TriplePath;
@@ -18,9 +14,6 @@ import semanticweb.sparql.SparqlUtils;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-
-//import org.junit.Test;
-
 
 public class SparqlUtilsTest {
 
@@ -423,64 +416,59 @@ public class SparqlUtilsTest {
                 "      ?execution <http://lsq.aksw.org/vocab#agent> ?agent .\n" +
                 "}\n" +
                 "\n";
-        Query query = QueryFactory.create(qs) ;
-        QueryExecution exec = QueryExecutionFactory.sparqlService("http://localhost:8890/sparql", query);
+         String qs2 =
+                "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>" +
+                "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> " +
+                "PREFIX lsqr: <http://lsq.aksw.org/res/>  " +
+                "PREFIX lsqv: <http://lsq.aksw.org/vocab#>  " +
+                "PREFIX sp: <http://spinrdf.org/sp#>  " +
+                "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>  " +
+                "PREFIX purl: <http://purl.org/dc/terms/>  \n" +
+                "\n" +
+                "PREFIX id:   <http://dblp.rkbexplorer.com/id/>\n" +
+                        "PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n" +
+                        "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" +
+                        "PREFIX akt:  <http://www.aktors.org/ontology/portal#>\n" +
+                        "PREFIX owl:  <http://www.w3.org/2002/07/owl#>\n" +
+                        "PREFIX akt:  <http://www.aktors.org/ontology/portal#>\n" +
+                        "PREFIX akts: <http://www.aktors.org/ontology/support#>\n" +
+                        "\n" +
+                        "\n" +
+                        "\n" +
+                        "SELECT * WHERE { ?s rdfs:label ?o } LIMIT 10\n";
+
+        Query query = QueryFactory.create(qs2) ;
+        QueryExecution exec = QueryExecutionFactory.sparqlService("http://localhost:3332/dblp/sparql", query);
 
         ResultSet results = exec.execSelect();
-        try {
-            BufferedWriter prop_count = new BufferedWriter(new FileWriter("time_features_lsqdbpedia.csv"));
-            StringBuilder sb2 = new StringBuilder();
-            String separator = "ᶶ";
-            sb2.append("id");
-            sb2.append(separator);
-            sb2.append("date");
-            sb2.append(separator);
-            sb2.append("year");
-            sb2.append(separator);
-            sb2.append("month");
-            sb2.append(separator);
-            sb2.append("day");
-            sb2.append(separator);
-            sb2.append("time");
-            sb2.append(separator);
-            sb2.append("runtime");
-            sb2.append(LineSeparator.Unix);
-
+//        try {
+//            BufferedWriter prop_count = new BufferedWriter(new FileWriter("time_features_lsqdbpedia.csv"));
+//            StringBuilder sb2 = new StringBuilder();
+//            String separator = "ᶶ";
+//            sb2.append("id");
+//            sb2.append(separator);
+//            sb2.append("date");
+//            sb2.append(separator);
+//            sb2.append("year");
+//            sb2.append(separator);
+//            sb2.append("month");
+//            sb2.append(separator);
+//            sb2.append("day");
+//            sb2.append(separator);
+//            sb2.append("time");
+//            sb2.append(separator);
+//            sb2.append("runtime");
+//            sb2.append(LineSeparator.Unix);
+//
             while (results.hasNext()) {
                 QuerySolution a = results.next();
-                String id = String.valueOf(a.get("s"));
-                sb2.append(id);
-                sb2.append(separator);
-
-                String date = String.valueOf(a.get("date"));
-                sb2.append(date);
-                sb2.append(separator);
-
-                XSDDateTime issued = ((XSDDateTime) a.getLiteral("issued").getValue());
-                int year = issued.getYears();
-                sb2.append(year);
-                sb2.append(separator);
-
-                int month = issued.getMonths();
-                sb2.append(month);
-                sb2.append(separator);
-
-                int day = issued.getDays();
-                sb2.append(day);
-                sb2.append(separator);
-
-                double time = issued.getTimePart();
-                sb2.append(time);
-                sb2.append(separator);
-
-                double runtime = a.getLiteral("runTimeMs").getDouble();
-                sb2.append(runtime);
-                sb2.append(LineSeparator.Unix);
+//                String id = String.valueOf(a.get("s"));
+                System.out.println(a.toString());
             }
-            prop_count.write(sb2.toString());
-            prop_count.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+//            prop_count.write(sb2.toString());
+//            prop_count.close();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
     }
 }

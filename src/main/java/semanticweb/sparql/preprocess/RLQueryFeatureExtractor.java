@@ -71,10 +71,10 @@ public class RLQueryFeatureExtractor {
      * Constructor for query data in a List
      * @param queryArr {@link ArrayList} [id, query, cardinality]
      */
-    public RLQueryFeatureExtractor(ArrayList<String> queryArr) {
-        this.id = queryArr.get(0);
-        this.query = queryArr.get(1);
-        this.execTime = queryArr.get(2);
+    public RLQueryFeatureExtractor(String[] queryArr) {
+        this.id = queryArr[0];
+        this.query = queryArr[1];
+        this.execTime = queryArr[0];
         this.queryTables = new ArrayList<>();
         this.queryVariables = new ArrayList<>();
         this.queryJoinsNodes = new HashMap<>();
@@ -108,14 +108,6 @@ public class RLQueryFeatureExtractor {
         ElementWalker.walk(e,
                 // For each element...
                 new ElementVisitorBase() {
-//                    // Delete tpf of Optional of queries from list to tpfs to vectorize.
-//                    public void visit(ElementOptional el) {
-//                        List<Element> elements = ((ElementGroup) el.getOptionalElement()).getElements();
-//                        for (Element element : elements) {
-//                            String key = element.toString();
-//                            tpf.remove(key);
-//                        }
-//                    }
                     public void visit(ElementFilter el) {
                         try {
                             ExprFunction2 exp = (ExprFunction2) el.getExpr();

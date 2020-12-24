@@ -34,7 +34,7 @@ public abstract  class FeaturesExtractorBase {
      */
     public ArrayList<ArrayList<String>> getArrayQueriesMetaFromCsv(String url, boolean header, String delimiter, int queryColumn, int idColumn, int execTimeColumn, int cardinalityColumn, int length) {
         String row;
-        ArrayList<ArrayList<String>> arrayList = new ArrayList<ArrayList<String>>();
+        ArrayList<ArrayList<String>> arrayList = new ArrayList<>();
         int countQueryInProcess = 0;
         //Al menos 3 columnas son requeridas(id,query,time)
         int csvColumns = 3;
