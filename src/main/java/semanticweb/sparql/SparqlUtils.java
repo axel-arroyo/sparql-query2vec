@@ -1167,6 +1167,31 @@ public class SparqlUtils {
         }
         return null;
     }
+
+    private String getGraphPatternByQuerySingle(String query, HashMap<String,Graph> medoids, Character output_delimiter){
+        Iterator<Map.Entry<String, Graph>> iterator = medoids.entrySet().iterator();
+
+        ArrayList<String> features = new ArrayList<>();
+        try {
+            Graph Gi = SparqlUtils.buildSPARQL2GXLGraph(query,  "row_");
+            RDFGraphMatching matcher = new RDFGraphMatching();
+            while (iterator.hasNext()) {
+                Map.Entry<String, Graph> mapElement = iterator.next();
+                Graph centroid = mapElement.getValue();
+                double dist = matcher.distanceBipartiteHungarian(Gi, centroid);
+
+                double similarity = 1 / (1+ dist);
+                features.add(String.valueOf(similarity));
+            }
+            return String.join(output_delimiter.toString(), features).concat("\n");
+
+        }
+        catch (Exception ex){
+            ex.printStackTrace();
+        }
+        return null;
+    }
+
     public void getGraphPatterns(String input, String output, String modeidsFile, String prefixFile, char input_delimiter, char output_delimiter, int idColumn, int queryColumn, int execTimeColumn) {
         ArrayList<String[]> queries = SparqlUtils.getQueries(input, prefixFile, new ArrayList<>(), idColumn, queryColumn, execTimeColumn, input_delimiter);
         System.out.println("Queries readed: ".concat(String.valueOf(queries.size())).concat(" in total."));
@@ -1225,6 +1250,64 @@ public class SparqlUtils {
                 sb.append(result);
                 sb.append("\n");
             }
+            br.write(sb.toString());
+            br.close();
+            System.out.println("Medoids vectors computed, output writed in :" + output);
+        }
+        catch (Exception ex){
+            ex.printStackTrace();
+            System.out.println("Something was wrong in the writing process of the output");
+
+        }
+    }
+
+    public void getQueryGraphPatterns(String input, String output, String modeidsFile, String prefixFile, char input_delimiter, char output_delimiter, int idColumn, int queryColumn, int execTimeColumn) throws Exception {
+        ArrayList<String[]> queries = SparqlUtils.getQueries(input, prefixFile, new ArrayList<>(), idColumn, queryColumn, execTimeColumn, input_delimiter);
+        System.out.println("Queries readed: ".concat(String.valueOf(queries.size())).concat(" in total."));
+
+        HashMap<String,Graph> medoidsMap = new HashMap<>();
+        BufferedReader reader;
+
+        try {
+            reader = new BufferedReader(new FileReader(modeidsFile));
+
+            String header = reader.readLine();
+            String line = reader.readLine();
+            int index = 0;
+            while (line != null) {
+
+                System.out.println(line);
+                String[] medoid_cols = line.split(String.valueOf(input_delimiter));
+                String query = medoid_cols[queryColumn].replaceAll("\\s+","");
+                Graph Gi = SparqlUtils.buildSPARQL2GXLGraph(query,  "row_"+ index);
+                medoidsMap.put(medoid_cols[idColumn], Gi);
+                line = reader.readLine();
+                index+=1;
+            }
+            reader.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        System.out.println(queries.get(0)[queryColumn]);
+        String vectorgp = getGraphPatternByQuerySingle(queries.get(0)[queryColumn], medoidsMap, output_delimiter);
+        String query_id = queries.get(0)[idColumn];
+        StringBuilder sb = new StringBuilder();
+//
+        BufferedWriter br;
+        try {
+            br = new BufferedWriter(new FileWriter(output));
+            //Write header
+            sb.append("id").append(output_delimiter);
+            sb.append("time");
+            for (int i = 0; i < medoidsMap.size(); i++) {
+                sb.append(output_delimiter);
+                sb.append("pcs").append(i);
+            }
+            sb.append("\n");
+            sb.append(query_id).append(output_delimiter).append("0.0").append(output_delimiter);
+            sb.append(vectorgp);
+            sb.append("\n");
             br.write(sb.toString());
             br.close();
             System.out.println("Medoids vectors computed, output writed in :" + output);

@@ -216,6 +216,44 @@ public class Endpoint {
                     rpfv.executeSamplingHist(params[0], params[1], output_delimiter, input_delimiter, output_element_delimiter, prefixFile);
                     break;
                 }
+                case "query-features": {
+                    SparqlUtils sparqlUtils = new SparqlUtils();
+                    String input, output, medoids_queries;
+                    try {
+                        input = params[0];
+                        output = params[1];
+                        medoids_queries = params[2];
+
+                    } catch (Exception ex) {
+                        System.out.println("args[0] : Input csv \n args[1] : Output path \n");
+                        return;
+                    }
+
+                    TDBExecutionAndFeature.produceALgebraFeatures(
+                        input,
+                        output.concat("algebra_features"),
+                        configFile,
+                        prefixFile,
+                        input_delimiter,
+                        output_delimiter,
+                        idColumn,
+                        queryColumn,
+                        execTimeColumn
+                    );
+
+                    sparqlUtils.getQueryGraphPatterns(
+                        input,
+                        output.concat("graph_pattern"),
+                        medoids_queries,
+                        prefixFile.equals("") ? null : prefixFile,
+                        input_delimiter.toCharArray()[0],
+                        output_delimiter.toCharArray()[0],
+                        idColumn,
+                        queryColumn,
+                        execTimeColumn
+                    );
+                    break;
+                }
                 default: {
                     System.out.println("The task not found. Pleas use one of them: 'kmedoids, edit-distance, algebra-features, predicate-features'");
                 }

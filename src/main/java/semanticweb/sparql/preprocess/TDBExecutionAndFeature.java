@@ -289,6 +289,7 @@ public class TDBExecutionAndFeature {
 			e.printStackTrace();
 		}
 	}
+
 	public static void produceALgebraFeatures(String inputFile, String outputFile, String configFile, String prefixFile, String input_delimiter, String output_delimiter, int idColumn, int queryColumn, int execTimeColumn)  throws Exception{
 		System.out.println("Inside algebra features generation");
 		if (configFile.isEmpty()) {
@@ -303,6 +304,7 @@ public class TDBExecutionAndFeature {
 		watch.stop();
 		System.out.println("Total time for algebra query extraction: "+watch.getTime()+" ms");
 	}
+
 	public static void main(String[] args) throws Exception {
 		System.out.println("Inside algebra features generation");
 		String config_file = "";
