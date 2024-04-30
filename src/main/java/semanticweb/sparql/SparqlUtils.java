@@ -29,14 +29,13 @@ import java.util.stream.Collectors;
 
 public class SparqlUtils {
 
-
     final public static String SPARQL_VAR_NS = "http://wimmics.inria.fr/kolflow/qp#";
     public static Model model;
     public static String prefixes = "";
     public static ArrayList<String[]> queriesError = new ArrayList<>();
 
     public static void getPropsAndObjectCount() {
-//		Map<String, Integer> map = new HashMap<String, Integer>();
+        // Map<String, Integer> map = new HashMap<String, Integer>();
         ParameterizedSparqlString qs = new ParameterizedSparqlString("" +
                 "select distinct ?property where {\n"
                 + "  ?subject ?property ?object . \n" +
@@ -67,13 +66,13 @@ public class SparqlUtils {
         } catch (IOException e) {
             e.printStackTrace();
         }
-//		System.out.println(map.toString());
+        // System.out.println(map.toString());
     }
 
     /**
-     * Retrieve array list of csv file, using delimiter  column param
+     * Retrieve array list of csv file, using delimiter column param
      *
-     * @param url String File path to extract data.
+     * @param url          String File path to extract data.
      * @param delimiterCol String delimiter of columns.
      * @return ArrayList with data
      */
@@ -95,9 +94,9 @@ public class SparqlUtils {
     }
 
     /**
-     * Retrieve array list of csv file, using delimiter  column param
+     * Retrieve array list of csv file, using delimiter column param
      *
-     * @param url String File path to extract data.
+     * @param url          String File path to extract data.
      * @param delimiterCol String delimiter of columns.
      * @param delimiterRow String delimiter of rows.
      * @return ArrayList with data
@@ -150,21 +149,22 @@ public class SparqlUtils {
      * @param url String
      * @return Array of array list of strings
      */
-    public static ArrayList<ArrayList<String>> getArrayQueriesFromCsv(String url, boolean header, int queryColumn, int idColumn) {
+    public static ArrayList<ArrayList<String>> getArrayQueriesFromCsv(String url, boolean header, int queryColumn,
+            int idColumn) {
         String row;
         ArrayList<ArrayList<String>> arrayList = new ArrayList<ArrayList<String>>();
         int count = 0;
         try {
             BufferedReader csvReader = new BufferedReader(new FileReader(url));
             if (header) {
-                //Ignore first read that corresponde with header
+                // Ignore first read that corresponde with header
                 csvReader.readLine();
             }
             while ((row = csvReader.readLine()) != null) {
                 countQueryInProcess++;
                 String[] rowArray = row.split(",");
                 row = rowArray[queryColumn];
-                //Remove quotes in init and end of the string...
+                // Remove quotes in init and end of the string...
                 row = row.replaceAll("^\"|\"$", "");
                 ArrayList<String> predicatesAndId = new ArrayList<>();
                 if (idColumn >= 0)
@@ -192,15 +192,17 @@ public class SparqlUtils {
      * @return HashMap with
      */
     public static HashMap<String, String> getNamespacesStr(String url) {
+        System.out.println("Reading namespaces from file: " + url);
         String prefixes = "";
         Model model = ModelFactory.createDefaultModel();
         try {
             BufferedReader csvReader = new BufferedReader(new FileReader(url));
             String row;
             while ((row = csvReader.readLine()) != null) {
-                String[] predicates = row.split("\t");
+                String[] predicates = row.split("\\s");
                 model.setNsPrefix(predicates[0], predicates[1]);
-                prefixes = prefixes.concat("PREFIX ").concat(predicates[0]).concat(": ").concat("<").concat(predicates[1]).concat("> \n");
+                prefixes = prefixes.concat("PREFIX ").concat(predicates[0]).concat(": ").concat("<")
+                        .concat(predicates[1]).concat("> \n");
             }
             csvReader.close();
         } catch (IOException e) {
@@ -211,6 +213,7 @@ public class SparqlUtils {
 
     /**
      * Get namespaces from file.
+     * 
      * @param url File url to extract namespaces
      * @return Model object of Jena that contains namespaces.
      */
@@ -223,7 +226,8 @@ public class SparqlUtils {
             while ((row = csvReader.readLine()) != null) {
                 String[] predicates = row.split("\t");
                 model.setNsPrefix(predicates[0], predicates[1]);
-                prefixes = prefixes.concat("PREFIX ").concat(predicates[0]).concat(": ").concat("<").concat(predicates[1]).concat("> \n");
+                prefixes = prefixes.concat("PREFIX ").concat(predicates[0]).concat(": ").concat("<")
+                        .concat(predicates[1]).concat("> \n");
             }
             csvReader.close();
         } catch (IOException e) {
@@ -231,12 +235,15 @@ public class SparqlUtils {
         }
         return model;
     }
-    public static Model getNamespacesFromCsv( String url, String delimiter) {
+
+    public static Model getNamespacesFromCsv(String url, String delimiter) {
         Model model = ModelFactory.createDefaultModel();
         return getNamespacesFromCsv(model, url, delimiter);
     }
+
     /**
      * Get namespaces from file.
+     * 
      * @param url File url to extract namespaces
      * @return Model object of Jena that contains namespaces.
      */
@@ -247,7 +254,8 @@ public class SparqlUtils {
             while ((row = csvReader.readLine()) != null) {
                 String[] predicates = row.split(delimiter);
                 model.setNsPrefix(predicates[0], predicates[1]);
-                prefixes = prefixes.concat("PREFIX ").concat(predicates[0]).concat(": ").concat("<").concat(predicates[1]).concat("> \n");
+                prefixes = prefixes.concat("PREFIX ").concat(predicates[0]).concat(": ").concat("<")
+                        .concat(predicates[1]).concat("> \n");
             }
             csvReader.close();
         } catch (IOException e) {
@@ -319,21 +327,23 @@ public class SparqlUtils {
     /**
      * Retrieve array of queries in vectors way
      *
-     * @param urlQueries File url to read queries.
+     * @param urlQueries  File url to read queries.
      * @param urlFeatures File url to read features by line.
-     * return ArrayList queries.
+     *                    return ArrayList queries.
      */
-    public static ArrayList<String[]> getArrayFeaturesVector(String urlQueries, String urlFeatures, String namespaces, String output) {
+    public static ArrayList<String[]> getArrayFeaturesVector(String urlQueries, String urlFeatures, String namespaces,
+            String output) {
 
         model = getNamespacesDBPed(namespaces);
 
         ArrayList<String[]> vectors = new ArrayList<String[]>();
 
-        //Get features list, in [0] uri, in [1] frequency
+        // Get features list, in [0] uri, in [1] frequency
         ArrayList<String[]> featuresArray = getArrayFromCsvFile(urlFeatures);
         Map<String, Integer> featuresMap = new HashMap<>();
         ArrayList<ArrayList<String>> featInQueryList = getArrayQueriesFromCsv(urlQueries, true, 1, 0);
-        //we use the size of array intead of -1(csv header) because we use extra column called others.
+        // we use the size of array intead of -1(csv header) because we use extra column
+        // called others.
         String[] vectorheader = new String[featuresArray.size() + 2];
         vectorheader[0] = "id";
         vectorheader[1] = "OTHER";
@@ -344,7 +354,7 @@ public class SparqlUtils {
             i++;
         }
 
-//        produceCsvArray2(featInQueryList,output);
+        // produceCsvArray2(featInQueryList,output);
         for (ArrayList<String> queryArr : featInQueryList) {
             String[] vector = new String[vectorheader.length];
             boolean idSeted = false;
@@ -360,7 +370,7 @@ public class SparqlUtils {
                         vector[index] = String.valueOf('0');
                     vector[index] = String.valueOf(Integer.parseInt(vector[index]) + 1);
                 } catch (Exception ex) {
-                    //ex.printStackTrace();
+                    // ex.printStackTrace();
                     if (vector[1] == null)
                         vector[1] = String.valueOf('0');
                     vector[1] = String.valueOf(Integer.parseInt(vector[1]) + 1);
@@ -391,8 +401,7 @@ public class SparqlUtils {
     }
 
     public static String clearQuery(String s) {
-        return s.replaceAll("&format=(json|xml|html)", "").
-                replaceAll("&output=(json|xml|html)", "");
+        return s.replaceAll("&format=(json|xml|html)", "").replaceAll("&output=(json|xml|html)", "");
     }
 
     public static String replacePrefixes(String s) {
@@ -415,13 +424,8 @@ public class SparqlUtils {
         String query = clearQuery(s);
         query = replacePrefixes(query);
         query = fixVariables(query);
-        query = query.
-                replaceAll("[\\{\\}\\(\\)( )]+", " ").
-                replaceAll("[\n]*", "").
-                replaceAll(" \\. ", " ").
-                replaceAll(" \\.", " ").
-                replaceAll("\\. ", " ").
-                toLowerCase();
+        query = query.replaceAll("[\\{\\}\\(\\)( )]+", " ").replaceAll("[\n]*", "").replaceAll(" \\. ", " ")
+                .replaceAll(" \\.", " ").replaceAll("\\. ", " ").toLowerCase();
         return query.split(" ");
     }
 
@@ -452,7 +456,7 @@ public class SparqlUtils {
      */
     public static String getQueryReadyForExecution(String queryString, boolean isCleaned) {
 
-        //If not cleaned the query process based on logs format....
+        // If not cleaned the query process based on logs format....
         if (!isCleaned) {
             try {
                 queryString = java.net.URLDecoder.decode(queryString, StandardCharsets.UTF_8.name());
@@ -585,11 +589,12 @@ public class SparqlUtils {
                         while (triples.hasNext()) {
                             TriplePath t = triples.next();
                             Triple triple = t.asTriple();
-                            if (triple == null){
-                                //Es que no es instancia de 1-Link
-//                                if (t.getPath() instanceof P_Seq){
-                                    triple = Triple.create(t.getSubject(), NodeFactory.createURI(t.getPath().toString()),t.getObject());
-//                                }
+                            if (triple == null) {
+                                // Es que no es instancia de 1-Link
+                                // if (t.getPath() instanceof P_Seq){
+                                triple = Triple.create(t.getSubject(), NodeFactory.createURI(t.getPath().toString()),
+                                        t.getObject());
+                                // }
                             }
                             allTriples.add(triple);
                         }
@@ -605,7 +610,6 @@ public class SparqlUtils {
 
                     public void visit(ElementSubQuery el) {
 
-
                         Query sQuery = el.getQuery();
                         sQuery.setPrefixMapping(query.getPrefixMapping());
                         String sQueryStr = el.getQuery().serialize();
@@ -614,8 +618,7 @@ public class SparqlUtils {
                         allTriples.addAll(triples);
 
                     }
-                }
-        );
+                });
         return allTriples;
 
     }
@@ -643,9 +646,9 @@ public class SparqlUtils {
                             Iterator<TriplePath> triples = el.patternElts();
                             while (triples.hasNext()) {
                                 // ...and grab the subject
-                                //subjects.add(triples.next().getSubject());
+                                // subjects.add(triples.next().getSubject());
                                 TriplePath t = triples.next();
-                                //System.out.println(t.toString());
+                                // System.out.println(t.toString());
                                 try {
                                     if (!t.getPredicate().isURI())
                                         continue;
@@ -665,12 +668,11 @@ public class SparqlUtils {
                             Iterator<Triple> triples = el.patternElts();
                             while (triples.hasNext()) {
                                 // ...and grab the subject
-                                //subjects.add(triples.next().getSubject());
+                                // subjects.add(triples.next().getSubject());
                                 Triple t = triples.next();
-                                //System.out.println(t.toString());
+                                // System.out.println(t.toString());
                                 predicates.add(t.getPredicate().getURI());
                             }
-
 
                         }
 
@@ -683,19 +685,17 @@ public class SparqlUtils {
                             ArrayList<String> predicats = retrievePredicatesInTriples(sQueryStr);
                             predicates.addAll(predicats);
                         }
-                    }
-            );
+                    });
             return predicates;
         } catch (Exception ex) {
             return predicates;
         }
 
-
     }
 
-
     /**
-     * Replaces the ? with a URI to hel create an RDF graph with the sparql variables
+     * Replaces the ? with a URI to hel create an RDF graph with the sparql
+     * variables
      *
      * @param symbol name of the variable
      * @return refined String URI for the sparql variable
@@ -708,7 +708,8 @@ public class SparqlUtils {
     }
 
     /**
-     * Replaces the ? with a URI to hel create an RDF graph with the sparql variables
+     * Replaces the ? with a URI to hel create an RDF graph with the sparql
+     * variables
      *
      * @param node node for the sparql variable
      * @return refined String URI for the sparql variable
@@ -734,7 +735,6 @@ public class SparqlUtils {
         for (Triple t : triples) {
             Node sub = t.getSubject();
 
-
             Resource rSub = null;
 
             if (sub.isVariable()) {
@@ -753,7 +753,6 @@ public class SparqlUtils {
 
             if (pred.isVariable()) {
 
-
                 String refinePredUri = refineSymbol(pred);
 
                 rPred = model.createProperty(refinePredUri);
@@ -762,12 +761,10 @@ public class SparqlUtils {
 
             }
 
-
             Node obj = t.getObject();
             RDFNode rObj = null;
 
             if (obj.isVariable()) {
-
 
                 String refineObjUri = refineSymbol(obj);
 
@@ -776,12 +773,12 @@ public class SparqlUtils {
                 rObj = model.asRDFNode(obj);
             }
 
-            //System.out.println(rSub.getClass());
-            //System.out.println(rPred.getClass());
-            //System.out.println(rObj.getClass());
+            // System.out.println(rSub.getClass());
+            // System.out.println(rPred.getClass());
+            // System.out.println(rObj.getClass());
 
             Statement st = model.createStatement(rSub, rPred, rObj);
-            //System.out.println(st);
+            // System.out.println(st);
             model.add(st);
 
         }
@@ -803,7 +800,6 @@ public class SparqlUtils {
         for (Triple t : triples) {
             Node sub = t.getSubject();
 
-
             Resource rSub = null;
 
             if (sub.isVariable()) {
@@ -822,7 +818,6 @@ public class SparqlUtils {
 
             if (pred.isVariable()) {
 
-
                 String refinePredUri = refineSymbol(pred);
 
                 rPred = model.createProperty(refinePredUri);
@@ -831,12 +826,10 @@ public class SparqlUtils {
 
             }
 
-
             Node obj = t.getObject();
             RDFNode rObj = null;
 
             if (obj.isVariable()) {
-
 
                 String refineObjUri = refineSymbol(obj);
 
@@ -845,12 +838,12 @@ public class SparqlUtils {
                 rObj = model.asRDFNode(obj);
             }
 
-            //System.out.println(rSub.getClass());
-            //System.out.println(rPred.getClass());
-            //System.out.println(rObj.getClass());
+            // System.out.println(rSub.getClass());
+            // System.out.println(rPred.getClass());
+            // System.out.println(rObj.getClass());
 
             Statement st = model.createStatement(rSub, rPred, rObj);
-            //System.out.println(st);
+            // System.out.println(st);
             model.add(st);
 
         }
@@ -859,13 +852,15 @@ public class SparqlUtils {
     }
 
     /**
-     * Returns true if the Resource represented by the URI was a variable in the original sparql query
+     * Returns true if the Resource represented by the URI was a variable in the
+     * original sparql query
      *
      * @param uri a RDF resource URI
      * @return true or false
      */
     private static boolean wasVariable(String uri) {
-        if (uri.contains(SPARQL_VAR_NS)) return true;
+        if (uri.contains(SPARQL_VAR_NS))
+            return true;
         return false;
     }
 
@@ -888,10 +883,8 @@ public class SparqlUtils {
 
         gxl.addChild(graph);
 
-
         // write it to standard out
-        //model.write(System.out);
-
+        // model.write(System.out);
 
         ResIterator subIterator = model.listSubjects();
         while (subIterator.hasNext()) {
@@ -915,18 +908,18 @@ public class SparqlUtils {
             if (wasVariable(obj.toString())) {
                 gxlObj = RDF2GXL.transformResourceURI2GXL(obj.toString(), "?");
             } else {
-                //check in RDF spec whether literals with same values are considered as same RDF graph nodes.
+                // check in RDF spec whether literals with same values are considered as same
+                // RDF graph nodes.
                 gxlObj = RDF2GXL.transformResourceURI2GXL(obj.toString());
             }
             graph.addChild(gxlObj);
         }
 
-
         StmtIterator stmtIterator = model.listStatements();
 
         while (stmtIterator.hasNext()) {
             Statement s = stmtIterator.nextStatement();
-            //System.out.println(s);
+            // System.out.println(s);
             String fromURI = s.getSubject().toString();
             String predicateURI = wasVariable(s.getPredicate().toString()) ? "?" : s.getPredicate().toString();
             String toResource = s.getObject().toString();
@@ -934,11 +927,9 @@ public class SparqlUtils {
             XMLElement edge = RDF2GXL.transformTriple2GXL(fromURI, predicateURI, toResource);
             graph.addChild(edge);
 
-
         }
 
         return RDF2GXL.parseGXL(gxl);
-
 
     }
 
@@ -961,10 +952,8 @@ public class SparqlUtils {
 
         gxl.addChild(graph);
 
-
         // write it to standard out
-        //model.write(System.out);
-
+        // model.write(System.out);
 
         ResIterator subIterator = model.listSubjects();
         while (subIterator.hasNext()) {
@@ -988,18 +977,18 @@ public class SparqlUtils {
             if (wasVariable(obj.toString())) {
                 gxlObj = RDF2GXL.transformResourceURI2GXL(obj.toString(), "?");
             } else {
-                //check in RDF spec whether literals with same values are considered as same RDF graph nodes.
+                // check in RDF spec whether literals with same values are considered as same
+                // RDF graph nodes.
                 gxlObj = RDF2GXL.transformResourceURI2GXL(obj.toString());
             }
             graph.addChild(gxlObj);
         }
 
-
         StmtIterator stmtIterator = model.listStatements();
 
         while (stmtIterator.hasNext()) {
             Statement s = stmtIterator.nextStatement();
-            //System.out.println(s);
+            // System.out.println(s);
             String fromURI = s.getSubject().toString();
             String predicateURI = wasVariable(s.getPredicate().toString()) ? "?" : s.getPredicate().toString();
             String toResource = s.getObject().toString();
@@ -1007,11 +996,9 @@ public class SparqlUtils {
             XMLElement edge = RDF2GXL.transformTriple2GXL(fromURI, predicateURI, toResource);
             graph.addChild(edge);
 
-
         }
 
         return RDF2GXL.parseGXL(gxl);
-
 
     }
 
@@ -1043,7 +1030,8 @@ public class SparqlUtils {
 
                     int a = query.indexOf(String.valueOf(keys[i] + ":"));
                     if (a != -1) {
-                        prefixesStr = prefixesStr.concat("PREFIX ").concat(String.valueOf(keys[i])).concat(": ").concat("<").concat(pref.get(String.valueOf(keys[i]))).concat("> \n");
+                        prefixesStr = prefixesStr.concat("PREFIX ").concat(String.valueOf(keys[i])).concat(": ")
+                                .concat("<").concat(pref.get(String.valueOf(keys[i]))).concat("> \n");
                     }
                 }
                 query = prefixesStr.concat(" " + query);
@@ -1054,85 +1042,85 @@ public class SparqlUtils {
         }
         return queries;
     }
-	public static ArrayList<String[]> getQueries(String trainingQueryFile, String namespaces_path, ArrayList<Integer> not_include, int idColumn, int queryColumn,int execTimeColumn,char input_delimiter){
-		System.out.println("Reading Queries..");
+
+    public static ArrayList<String[]> getQueries(String trainingQueryFile, String namespaces_path,
+            ArrayList<Integer> not_include, int idColumn, int queryColumn, int execTimeColumn, char input_delimiter) {
+        System.out.println("Reading Queries..");
         Model model = ModelFactory.createDefaultModel();
-		if (namespaces_path != null){
-			model = SparqlUtils.getNamespacesFromCsv(model, namespaces_path, String.valueOf(input_delimiter));
-		}
+        if (namespaces_path != null) {
+            model = SparqlUtils.getNamespacesFromCsv(model, namespaces_path, String.valueOf(input_delimiter));
+        }
 
-		Map<String, String> pref = model.getNsPrefixMap();
-		Object[] keys = pref.keySet().toArray();
+        Map<String, String> pref = model.getNsPrefixMap();
+        Object[] keys = pref.keySet().toArray();
 
-		boolean header = true;
-		ArrayList<String[]> queries = new ArrayList<>();
-		int index = 0;
-		try {
-			InputStreamReader csv = new InputStreamReader(new FileInputStream(trainingQueryFile));
-			CSVReader csvReader = new CSVReader (csv,input_delimiter);
-			String[] record;
+        boolean header = true;
+        ArrayList<String[]> queries = new ArrayList<>();
+        int index = 0;
+        try {
+            InputStreamReader csv = new InputStreamReader(new FileInputStream(trainingQueryFile));
+            CSVReader csvReader = new CSVReader(csv, input_delimiter);
+            String[] record;
 
-			while ((record = csvReader.readNext()) != null) {
-			    if(record.length < 3){
-			        //no es una tupla válida
-			        continue;
+            while ((record = csvReader.readNext()) != null) {
+                if (record.length < 3) {
+                    // no es una tupla válida
+                    continue;
                 }
-				if (header){
-					header = false;
-					continue;
-				}
-				if(not_include.contains(index)){
-					index++;
-					continue;
-				}
-				else
-				{
-					index++;
-				}
-				String query = record[queryColumn].replaceAll("^\"|\"$", "");
-				String id = record[idColumn];
-				String execTime = record[execTimeColumn];
-				String prefixesStr = "";
-				for (int i = 0; i < model.getNsPrefixMap().size(); i++) {
+                if (header) {
+                    header = false;
+                    continue;
+                }
+                if (not_include.contains(index)) {
+                    index++;
+                    continue;
+                } else {
+                    index++;
+                }
+                String query = record[queryColumn].replaceAll("^\"|\"$", "");
+                String id = record[idColumn];
+                String execTime = record[execTimeColumn];
+                String prefixesStr = "";
+                for (int i = 0; i < model.getNsPrefixMap().size(); i++) {
 
-					int a = query.indexOf(String.valueOf(keys[i]+":"));
-					if (a != -1 ) {
-						prefixesStr = prefixesStr.concat("PREFIX ").concat(String.valueOf(keys[i])).concat(": ").concat("<").concat(pref.get(String.valueOf(keys[i]))).concat("> \n");
-					}
-				}
-				query  = prefixesStr.concat(" " +query);
-				//Pos in [0] refer to the ID of query in logs.
+                    int a = query.indexOf(String.valueOf(keys[i] + ":"));
+                    if (a != -1) {
+                        prefixesStr = prefixesStr.concat("PREFIX ").concat(String.valueOf(keys[i])).concat(": ")
+                                .concat("<").concat(pref.get(String.valueOf(keys[i]))).concat("> \n");
+                    }
+                }
+                query = prefixesStr.concat(" " + query);
+                // Pos in [0] refer to the ID of query in logs.
                 try {
                     Query queryObj = QueryFactory.create(query, Syntax.syntaxARQ);
 
                     // Generate algebra
                     Algebra.compile(queryObj);
 
-
-                    String[] curr = new String[]{id, query, execTime};
+                    String[] curr = new String[] { id, query, execTime };
                     queries.add(curr);
-                }
-                catch (Exception exception){
+                } catch (Exception exception) {
                     exception.printStackTrace();
                     System.out.println("Error leyendo query: ".concat(query).concat(" :<end>"));
                     continue;
                 }
 
-			}
-		}
-		catch (IOException e) {
-			e.printStackTrace();
-		}
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         System.out.println("Queries readed!");
-        return  queries;
-	}
+        return queries;
+    }
 
-    public void calculateEditDistance(String input, String output, String prefixFile, int cores, char input_delimiter, char output_delimiter, int idColumn, int queryColumn, int execTimeColumn, int elemtByCore) {
-        ArrayList<String[]> queries = SparqlUtils.getQueries(input, prefixFile, new ArrayList<>(), idColumn, queryColumn, execTimeColumn, input_delimiter);
+    public void calculateEditDistance(String input, String output, String prefixFile, int cores, char input_delimiter,
+            char output_delimiter, int idColumn, int queryColumn, int execTimeColumn, int elemtByCore) {
+        ArrayList<String[]> queries = SparqlUtils.getQueries(input, prefixFile, new ArrayList<>(), idColumn,
+                queryColumn, execTimeColumn, input_delimiter);
 
         System.out.println("Creating Query graphs..");
         ForkJoinPool pool = new ForkJoinPool();
-//        GraphBuildAction task = new GraphBuildAction(queries, 0, 50);
+        // GraphBuildAction task = new GraphBuildAction(queries, 0, 50);
         GraphBuildAction task = new GraphBuildAction(queries, 0, queries.size());
         ArrayList<HashMap<String, Object>> grafos = pool.invoke(task);
         System.out.println("Query graphs created" + grafos.size());
@@ -1141,69 +1129,70 @@ public class SparqlUtils {
 
         String a = "";
     }
-    
-    private String getGraphPatternByQuery(String[] query, HashMap<String,Graph> medoids, Character output_delimiter){
+
+    private String getGraphPatternByQuery(String[] query, HashMap<String, Graph> medoids, Character output_delimiter) {
         Iterator<Map.Entry<String, Graph>> iterator = medoids.entrySet().iterator();
 
         StringBuilder stringBuilder = new StringBuilder();
         try {
-            Graph Gi = SparqlUtils.buildSPARQL2GXLGraph(query[1],  "row_"+ query[0]);
+            Graph Gi = SparqlUtils.buildSPARQL2GXLGraph(query[1], "row_" + query[0]);
             stringBuilder.append(query[0]).append(output_delimiter);
             stringBuilder.append(query[2]);
             RDFGraphMatching matcher = new RDFGraphMatching();
             while (iterator.hasNext()) {
                 Map.Entry<String, Graph> mapElement = iterator.next();
-                Graph centroid = ((Graph)mapElement.getValue());
+                Graph centroid = ((Graph) mapElement.getValue());
                 double dist = matcher.distanceBipartiteHungarian(Gi, centroid);
                 stringBuilder.append(output_delimiter);
-                double similarity = 1 / (1+ dist);
+                double similarity = 1 / (1 + dist);
                 stringBuilder.append(similarity);
             }
             stringBuilder.append("\n");
             return stringBuilder.toString();
-        }
-        catch (Exception ex){
+        } catch (Exception ex) {
             ex.printStackTrace();
         }
         return null;
     }
 
-    private String getGraphPatternByQuerySingle(String query, HashMap<String,Graph> medoids, Character output_delimiter){
+    private String getGraphPatternByQuerySingle(String query, HashMap<String, Graph> medoids,
+            Character output_delimiter) {
         Iterator<Map.Entry<String, Graph>> iterator = medoids.entrySet().iterator();
 
         ArrayList<String> features = new ArrayList<>();
         try {
-            Graph Gi = SparqlUtils.buildSPARQL2GXLGraph(query,  "row_");
+            Graph Gi = SparqlUtils.buildSPARQL2GXLGraph(query, "row_");
             RDFGraphMatching matcher = new RDFGraphMatching();
             while (iterator.hasNext()) {
                 Map.Entry<String, Graph> mapElement = iterator.next();
                 Graph centroid = mapElement.getValue();
                 double dist = matcher.distanceBipartiteHungarian(Gi, centroid);
 
-                double similarity = 1 / (1+ dist);
+                double similarity = 1 / (1 + dist);
                 features.add(String.valueOf(similarity));
             }
             return String.join(output_delimiter.toString(), features).concat("\n");
 
-        }
-        catch (Exception ex){
+        } catch (Exception ex) {
             ex.printStackTrace();
         }
         return null;
     }
 
-    public void getGraphPatterns(String input, String output, String modeidsFile, String prefixFile, char input_delimiter, char output_delimiter, int idColumn, int queryColumn, int execTimeColumn) {
-        ArrayList<String[]> queries = SparqlUtils.getQueries(input, prefixFile, new ArrayList<>(), idColumn, queryColumn, execTimeColumn, input_delimiter);
+    public void getGraphPatterns(String input, String output, String modeidsFile, String prefixFile,
+            char input_delimiter, char output_delimiter, int idColumn, int queryColumn, int execTimeColumn) {
+        ArrayList<String[]> queries = SparqlUtils.getQueries(input, prefixFile, new ArrayList<>(), idColumn,
+                queryColumn, execTimeColumn, input_delimiter);
         System.out.println("Queries readed: ".concat(String.valueOf(queries.size())).concat(" in total."));
         ArrayList<String> medoidsId = new ArrayList<>();
-        HashMap<String,Graph> medoidsMap = new HashMap<>();
+        HashMap<String, Graph> medoidsMap = new HashMap<>();
         BufferedReader reader;
         try {
             reader = new BufferedReader(new FileReader(modeidsFile));
             String line = reader.readLine();
             while (line != null) {
                 System.out.println(line);
-                medoidsId.add(line.replaceAll("\\s+",""));
+                medoidsId.add(line.replaceAll("\\s+", ""));
                 line = reader.readLine();
             }
             reader.close();
@@ -1211,34 +1200,33 @@ public class SparqlUtils {
             e.printStackTrace();
         }
         for (String[] query : queries) {
-            int index = medoidsId.indexOf(query[idColumn].replaceAll("\\s+",""));
+            int index = medoidsId.indexOf(query[idColumn].replaceAll("\\s+", ""));
             if (index >= 0) {
                 try {
-                    Graph Gi = SparqlUtils.buildSPARQL2GXLGraph(query[1],  "row_"+ query[0]);
+                    Graph Gi = SparqlUtils.buildSPARQL2GXLGraph(query[1], "row_" + query[0]);
                     medoidsMap.put(query[idColumn], Gi);
-                }
-                catch (Exception ex){
+                } catch (Exception ex) {
                     ex.printStackTrace();
                 }
 
             }
         }
-        if(medoidsMap.size() != medoidsId.size()){
+        if (medoidsMap.size() != medoidsId.size()) {
             System.out.println("Some Medoids not finded!!! :(");
             return;
         }
         System.out.println("Moedoids readed: ".concat(String.valueOf(medoidsId.size())).concat(" in total."));
         System.out.println("Creating Query graphs..");
-        
+
         List<String> results = queries.parallelStream()
                 .map(i -> getGraphPatternByQuery(i, medoidsMap, output_delimiter)) // each operation takes one second
                 .collect(Collectors.toList());
         StringBuilder sb = new StringBuilder();
-//
+        //
         BufferedWriter br;
         try {
             br = new BufferedWriter(new FileWriter(output));
-            //Write header
+            // Write header
             sb.append("id").append(output_delimiter);
             sb.append("time");
             for (int i = 0; i < medoidsId.size(); i++) {
@@ -1253,19 +1241,21 @@ public class SparqlUtils {
             br.write(sb.toString());
             br.close();
             System.out.println("Medoids vectors computed, output writed in :" + output);
-        }
-        catch (Exception ex){
+        } catch (Exception ex) {
             ex.printStackTrace();
             System.out.println("Something was wrong in the writing process of the output");
 
         }
     }
 
-    public void getQueryGraphPatterns(String input, String output, String modeidsFile, String prefixFile, char input_delimiter, char output_delimiter, int idColumn, int queryColumn, int execTimeColumn) throws Exception {
-        ArrayList<String[]> queries = SparqlUtils.getQueries(input, prefixFile, new ArrayList<>(), idColumn, queryColumn, execTimeColumn, input_delimiter);
+    public void getQueryGraphPatterns(String input, String output, String modeidsFile, String prefixFile,
+            char input_delimiter, char output_delimiter, int idColumn, int queryColumn, int execTimeColumn)
+            throws Exception {
+        ArrayList<String[]> queries = SparqlUtils.getQueries(input, prefixFile, new ArrayList<>(), idColumn,
+                queryColumn, execTimeColumn, input_delimiter);
         System.out.println("Queries readed: ".concat(String.valueOf(queries.size())).concat(" in total."));
 
-        HashMap<String,Graph> medoidsMap = new HashMap<>();
+        HashMap<String, Graph> medoidsMap = new HashMap<>();
         BufferedReader reader;
 
         try {
@@ -1278,11 +1268,11 @@ public class SparqlUtils {
 
                 System.out.println(line);
                 String[] medoid_cols = line.split(String.valueOf(input_delimiter));
-                String query = medoid_cols[queryColumn].replaceAll("\\s+","");
-                Graph Gi = SparqlUtils.buildSPARQL2GXLGraph(query,  "row_"+ index);
+                String query = medoid_cols[queryColumn].replaceAll("\\s+", "");
+                Graph Gi = SparqlUtils.buildSPARQL2GXLGraph(query, "row_" + index);
                 medoidsMap.put(medoid_cols[idColumn], Gi);
                 line = reader.readLine();
-                index+=1;
+                index += 1;
             }
             reader.close();
         } catch (IOException e) {
@@ -1293,11 +1283,11 @@ public class SparqlUtils {
         String vectorgp = getGraphPatternByQuerySingle(queries.get(0)[queryColumn], medoidsMap, output_delimiter);
         String query_id = queries.get(0)[idColumn];
         StringBuilder sb = new StringBuilder();
-//
+        //
         BufferedWriter br;
         try {
             br = new BufferedWriter(new FileWriter(output));
-            //Write header
+            // Write header
             sb.append("id").append(output_delimiter);
             sb.append("time");
             for (int i = 0; i < medoidsMap.size(); i++) {
@@ -1311,69 +1301,75 @@ public class SparqlUtils {
             br.write(sb.toString());
             br.close();
             System.out.println("Medoids vectors computed, output writed in :" + output);
-        }
-        catch (Exception ex){
+        } catch (Exception ex) {
             ex.printStackTrace();
             System.out.println("Something was wrong in the writing process of the output");
 
         }
     }
+
     /**
-     *aw
+     * aw
+     * 
      * @param defaultGraph
      * @param output
      * @param init
      * @param last
      * @param limit
      */
-    public static void extractDataFromLsq(String defaultGraph, String output, int init, int last, int limit ){
-        String qs =
-                "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>" +
-                        "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> " +
-                        "PREFIX lsqr: <http://lsq.aksw.org/res/>  " +
-                        "PREFIX lsqv: <http://lsq.aksw.org/vocab#>  " +
-                        "PREFIX sp: <http://spinrdf.org/sp#>  " +
-                        "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>  " +
-                        "PREFIX purl: <http://purl.org/dc/terms/>  \n" +
-                        "\n" +
-                        "SELECT  Distinct ?s ?execution  ?issued (xsd:dateTime(?issued) as ?date) ?runTimeMs ?resultSize ?query WHERE {  \n" +
-                        " ?s  lsqv:execution ?execution . \n" +
-                        "  ?execution purl:issued  ?issued  . \n" +
-                        "?s  lsqv:resultSize ?resultSize     .\n" +
-                        "\t  ?s  lsqv:runTimeMs ?runTimeMs     .\n" +
-                        "\t  ?s  rdf:type ?type     .\n" +
-                        "\t  ?s  sp:text ?query     .\n" +
-                        "FILTER ( ?runTimeMs >= ".concat(String.valueOf(init)).concat(" && ?runTimeMs < ").concat(String.valueOf(last)).concat("  && ?resultSize >= 0) }\n")
-                                .concat("LIMIT ".concat(String.valueOf(limit)));
+    public static void extractDataFromLsq(String defaultGraph, String output, int init, int last, int limit) {
+        String qs = "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>" +
+                "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> " +
+                "PREFIX lsqr: <http://lsq.aksw.org/res/>  " +
+                "PREFIX lsqv: <http://lsq.aksw.org/vocab#>  " +
+                "PREFIX sp: <http://spinrdf.org/sp#>  " +
+                "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>  " +
+                "PREFIX purl: <http://purl.org/dc/terms/>  \n" +
+                "\n" +
+                "SELECT  Distinct ?s ?execution  ?issued (xsd:dateTime(?issued) as ?date) ?runTimeMs ?resultSize ?query WHERE {  \n"
+                +
+                " ?s  lsqv:execution ?execution . \n" +
+                "  ?execution purl:issued  ?issued  . \n" +
+                "?s  lsqv:resultSize ?resultSize     .\n" +
+                "\t  ?s  lsqv:runTimeMs ?runTimeMs     .\n" +
+                "\t  ?s  rdf:type ?type     .\n" +
+                "\t  ?s  sp:text ?query     .\n" +
+                "FILTER ( ?runTimeMs >= ".concat(String.valueOf(init)).concat(" && ?runTimeMs < ")
+                        .concat(String.valueOf(last)).concat("  && ?resultSize >= 0) }\n")
+                        .concat("LIMIT ".concat(String.valueOf(limit)));
         ARQ.init();
-        Query query = QueryFactory.create(qs) ;
-        QueryExecution exec = QueryExecutionFactory.sparqlService("http://localhost:8890/sparql", query, defaultGraph,null,null);
+        Query query = QueryFactory.create(qs);
+        QueryExecution exec = QueryExecutionFactory.sparqlService("http://localhost:8890/sparql", query, defaultGraph,
+                null, null);
 
         ResultSet results = exec.execSelect();
         try {
-            BufferedWriter prop_count = new BufferedWriter(new FileWriter("qeries_lsq_".concat(output).concat("_").concat(String.valueOf(init).concat("_").concat(String.valueOf(last))).concat(".csv")));
+            BufferedWriter prop_count = new BufferedWriter(new FileWriter("qeries_lsq_".concat(output).concat("_")
+                    .concat(String.valueOf(init).concat("_").concat(String.valueOf(last))).concat(".csv")));
             StringBuilder sb2 = new StringBuilder();
             String separator = "ᶶ";
-            /*sb2.append("id");
-            sb2.append(separator);
-            sb2.append("execution");
-            sb2.append(separator);
-            sb2.append("date");
-            sb2.append(separator);
-            sb2.append("year");
-            sb2.append(separator);
-            sb2.append("month");
-            sb2.append(separator);
-            sb2.append("day");
-            sb2.append(separator);
-            sb2.append("time");
-            sb2.append(separator);
-            sb2.append("runtime");
-            sb2.append(LineSeparator.Unix);*/
-            //sᶶexecutionᶶdateᶶyearᶶmonthᶶdayᶶtimeᶶrunTimeMsᶶresultSizeᶶquery
+            /*
+             * sb2.append("id");
+             * sb2.append(separator);
+             * sb2.append("execution");
+             * sb2.append(separator);
+             * sb2.append("date");
+             * sb2.append(separator);
+             * sb2.append("year");
+             * sb2.append(separator);
+             * sb2.append("month");
+             * sb2.append(separator);
+             * sb2.append("day");
+             * sb2.append(separator);
+             * sb2.append("time");
+             * sb2.append(separator);
+             * sb2.append("runtime");
+             * sb2.append(LineSeparator.Unix);
+             */
+            // sᶶexecutionᶶdateᶶyearᶶmonthᶶdayᶶtimeᶶrunTimeMsᶶresultSizeᶶquery
             while (results.hasNext()) {
                 QuerySolution a = results.next();
-                //?s ?execution  ?issued ?runTimeMs ?resultSize ?query
+                // ?s ?execution ?issued ?runTimeMs ?resultSize ?query
                 String s = String.valueOf(a.get("s"));
                 sb2.append(s);
                 sb2.append(separator);
@@ -1412,8 +1408,8 @@ public class SparqlUtils {
                 sb2.append(separator);
 
                 String queryLog = String.valueOf(a.get("query"));
-                sb2.append(queryLog.replaceAll("\t", " ").replaceAll("\r"," ").replaceAll("\n"," "));
-                sb2.append(IOUtils.LINE_SEPARATOR_UNIX);  //Esto porque es el último valor de la fila.
+                sb2.append(queryLog.replaceAll("\t", " ").replaceAll("\r", " ").replaceAll("\n", " "));
+                sb2.append(IOUtils.LINE_SEPARATOR_UNIX); // Esto porque es el último valor de la fila.
             }
             prop_count.write(sb2.toString());
             prop_count.close();

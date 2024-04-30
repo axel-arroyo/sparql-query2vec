@@ -1,7 +1,6 @@
 package semanticweb.sparql.utils;
 
 import java.util.HashMap;
-import java.util.Map;
 
 /**
  * This class represent the sampling needed for a predicate.
@@ -12,13 +11,16 @@ public class Sample {
     private String type;
     private String operator;
     private String value;
-    private HashMap<String,Object> histData;
+    private HashMap<String, Object> histData;
+
     /**
      * Contructor
+     * 
      * @param pred String predicate name
-     * @param type The type could be [number,uri,literal], usefull to select the to_string behaviour to output
+     * @param type The type could be [number,uri,literal], usefull to select the
+     *             to_string behaviour to output
      */
-    public Sample(String pred, String type,String operator, String value) {
+    public Sample(String pred, String type, String operator, String value) {
         this.pred = pred;
         this.type = type;
         this.value = type;
@@ -48,9 +50,10 @@ public class Sample {
     public void setHistData(HashMap<String, Object> histData) {
         this.histData = histData;
     }
-    //Todo
+
+    // Todo
     private String getEncoding() {
-        if (this.type.equals("number")){
+        if (this.type.equals("number")) {
             int minValue = (int) this.histData.get("minValue");
             int maxValue = (int) this.histData.get("maxValue");
             int distinctValues = (int) this.histData.get("maxValue");
