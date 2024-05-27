@@ -1113,6 +1113,42 @@ public class SparqlUtils {
         return queries;
     }
 
+    public static ArrayList<String[]> getQueriesLSQ(String trainingQueryFile, ArrayList<Integer> not_include,
+            int idColumn, int queryColumn, int execTimeColumn, char input_delimiter, boolean hasHeader) {
+        System.out.println("Reading Queries..");
+        ArrayList<String[]> queries = new ArrayList<>();
+        try {
+            CSVReader reader = new CSVReader(new FileReader(trainingQueryFile), input_delimiter);
+            String[] line;
+            while ((line = reader.readNext()) != null) {
+                if (hasHeader) {
+                    hasHeader = false;
+                    continue;
+                }
+                if (line.length < 3) {
+                    // no es una tupla válida
+                    continue;
+                }
+                if (not_include != null && not_include.contains(Integer.parseInt(line[idColumn]))) {
+                    continue;
+                }
+                /*
+                 * Remove quotes from query, either in the beginning or the end of the string
+                 */
+                String query = line[queryColumn].replaceAll("^\"|\"$", "");
+                String id = line[idColumn];
+                String execTime = line[execTimeColumn];
+                String[] curr = new String[] { id, query, execTime };
+                queries.add(curr);
+            }
+            reader.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        System.out.println("Queries read!");
+        return queries;
+    }
+
     public void calculateEditDistance(String input, String output, String prefixFile, int cores, char input_delimiter,
             char output_delimiter, int idColumn, int queryColumn, int execTimeColumn, int elemtByCore) {
         ArrayList<String[]> queries = SparqlUtils.getQueries(input, prefixFile, new ArrayList<>(), idColumn,

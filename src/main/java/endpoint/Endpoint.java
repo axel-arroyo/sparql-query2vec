@@ -203,6 +203,13 @@ public class Endpoint {
                             input_delimiter, output_delimiter, idColumn, queryColumn, execTimeColumn);
                     break;
                 }
+                case "custom-algebra-features": {
+                    String inputFile = params[0];
+                    String outputFile = params[1];
+                    TDBExecutionAndFeature.produceCustomALgebraFeatures(inputFile, outputFile, configFile, prefixFile,
+                            input_delimiter, output_delimiter, idColumn, queryColumn, execTimeColumn);
+                    break;
+                }
                 case "predicate-features": {
                     ArrayList<String[]> notused = SparqlUtils.getArrayFeaturesVector(params[0], params[1], params[2],
                             params[3]);
