@@ -37,65 +37,6 @@ public class AlgebraFeatureExtractor {
         this.debug = debug;
     }
 
-    /**
-     * Extracts features from the query string using the LSQ features:
-     * 1. "filter_bound",
-     * 2. "filter_contains",
-     * 3. "filter_eq",
-     * 4. "filter_exists",
-     * 5. "filter_ge",
-     * 6. "filter_gt",
-     * 7. "filter_isBlank",
-     * 8. "filter_isIRI",
-     * 9. "filter_isLiteral",
-     * 10. "filter_lang",
-     * 11. "filter_langMatches",
-     * 12. "filter_le",
-     * 13. "filter_lt",
-     * 14. "filter_ne",
-     * 15. "filter_not",
-     * 16. "filter_notexists",
-     * 17. "filter_or",
-     * 18. "filter_regex",
-     * 19. "filter_sameTerm",
-     * 20. "filter_str",
-     * 21. "filter_strends",
-     * 22. "filter_strstarts",
-     * 23. "filter_subtract",
-     * 24. "has_slice",
-     * 25. "max_slice_limit",
-     * 26. "max_slice_start",
-     * 27. "trees"
-     * 
-     * @param queryStr
-     * @return
-     */
-    public double[] extractLSQFeatures(String queryStr) {
-        Query query = QueryFactory.create(queryStr, Syntax.syntaxARQ);
-        // Generate algebra
-        Op op = Algebra.compile(query);
-        // Plan a = QueryExecutionFactory.createPlan(query,
-        // DatasetGraphFactory.createTxnMem(), new BindingHashMap());
-        // Op op = a.getOp();
-        if (debug) {
-            // System.out.println("Algebra tree:\n " + a );
-        }
-        // System.out.println("------------------------") ;
-        double[] features = getLSQFeatures(op);
-
-        treeHeight = 0;
-        visited = new DefaultedMap(false);
-        // System.out.println("Visited size: "+visited.size());
-        walkAlgebraTreeRecursive(op, 1);
-        features[featureIndex.get("treesize")] += treeHeight;
-        // System.out.println("Height:"+treeHeight);
-
-        return features;
-    }
-
-    public double[] getLSQFilterFeatures(String queryStr) {
-    }
-
     public double[] extractFeatures(String queryStr) {
         Query query = QueryFactory.create(queryStr, Syntax.syntaxARQ);
         // Generate algebra

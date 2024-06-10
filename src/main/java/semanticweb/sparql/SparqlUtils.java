@@ -1114,8 +1114,10 @@ public class SparqlUtils {
     }
 
     public static ArrayList<String[]> getQueriesLSQ(String trainingQueryFile, ArrayList<Integer> not_include,
-            int idColumn, int queryColumn, int execTimeColumn, char input_delimiter, boolean hasHeader) {
-        System.out.println("Reading Queries..");
+            int idColumn, int queryColumn, int execTimeColumn, char input_delimiter, boolean hasHeader,
+            int resultSizeColumn) {
+        System.out.println("Reading Queries with indexes idColumn: " + idColumn + " queryColumn: " + queryColumn
+                + " execTimeColumn: " + execTimeColumn + " resultSizeColumn: " + resultSizeColumn);
         ArrayList<String[]> queries = new ArrayList<>();
         try {
             CSVReader reader = new CSVReader(new FileReader(trainingQueryFile), input_delimiter);
@@ -1138,7 +1140,8 @@ public class SparqlUtils {
                 String query = line[queryColumn].replaceAll("^\"|\"$", "");
                 String id = line[idColumn];
                 String execTime = line[execTimeColumn];
-                String[] curr = new String[] { id, query, execTime };
+                String resultSize = line[resultSizeColumn];
+                String[] curr = new String[] { id, query, execTime, resultSize };
                 queries.add(curr);
             }
             reader.close();

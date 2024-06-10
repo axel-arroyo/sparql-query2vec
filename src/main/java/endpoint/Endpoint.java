@@ -203,11 +203,12 @@ public class Endpoint {
                             input_delimiter, output_delimiter, idColumn, queryColumn, execTimeColumn);
                     break;
                 }
-                case "custom-algebra-features": {
+                case "custom-deepset-features": {
                     String inputFile = params[0];
                     String outputFile = params[1];
-                    TDBExecutionAndFeature.produceCustomALgebraFeatures(inputFile, outputFile, configFile, prefixFile,
-                            input_delimiter, output_delimiter, idColumn, queryColumn, execTimeColumn);
+                    TDBExecutionAndFeature.produceLSQFeatures(inputFile, outputFile, configFile, prefixFile,
+                            input_delimiter, output_delimiter, idColumn, queryColumn, execTimeColumn,
+                            cardinalityColumn, withHeader);
                     break;
                 }
                 case "predicate-features": {

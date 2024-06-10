@@ -18,7 +18,7 @@ public class TDBExecutionAndFeature {
 	private List<String> testQueries;
 	private Properties prop;
 	private String inputQueryFile, outputFile, configFile, input_delimiter, output_delimiter;
-	private int idColumn, queryColumn, execTimeColumn;
+	private int idColumn, queryColumn, execTimeColumn, resultSizeColumn;
 	private Model model;
 	private boolean directTDB = false;
 	private boolean hasHeader;
@@ -59,12 +59,12 @@ public class TDBExecutionAndFeature {
 			String input_delimiter, String output_delimiter, int idColumn, int queryColumn, int execTimeColumn)
 			throws IOException {
 		this(inputQueryFile, outputFile, configFile, prefixFile, input_delimiter, output_delimiter, idColumn,
-				queryColumn, execTimeColumn, false);
+				queryColumn, execTimeColumn, false, -1);
 	}
 
 	public TDBExecutionAndFeature(String inputQueryFile, String outputFile, String configFile, String prefixFile,
 			String input_delimiter, String output_delimiter, int idColumn, int queryColumn, int execTimeColumn,
-			boolean hasHeader)
+			boolean hasHeader, int resultSizeColumn)
 			throws IOException {
 		prop = new Properties();
 		prop.load(new FileInputStream(configFile));
@@ -79,6 +79,7 @@ public class TDBExecutionAndFeature {
 		this.queryColumn = queryColumn;
 		this.execTimeColumn = execTimeColumn;
 		this.hasHeader = hasHeader;
+		this.resultSizeColumn = resultSizeColumn;
 	}
 
 	public ResultSet queryTDB(String qStr) {
@@ -260,13 +261,58 @@ public class TDBExecutionAndFeature {
 		System.out.println("Precess finished.");
 	}
 
-	private void generateFilterAndSliceFeatures() throws IOException {
+	private void generateLSQFeatures() throws IOException {
 		this.trainingQueries = SparqlUtils.getQueriesLSQ(inputQueryFile, null, idColumn, queryColumn,
-				execTimeColumn,
-				input_delimiter.charAt(0), hasHeader);
+				execTimeColumn, input_delimiter.charAt(0), hasHeader, resultSizeColumn);
+		QueryFeatureExtractorCustom fe = new QueryFeatureExtractorCustom();
+		String[] header = QueryFeatureExtractorCustom.QUERY_COLUMNS;
+		StringBuilder sb = new StringBuilder();
+		try (BufferedWriter br = new BufferedWriter(new FileWriter(outputFile))) {
+			// Header
+			sb.append("id");
+			sb.append(this.output_delimiter);
+			sb.append("query");
+			sb.append(this.output_delimiter);
+			int i = 0;
+			while (i < header.length) {
+				sb.append(header[i]);
+				sb.append(this.output_delimiter);
+				i++;
+			}
+			sb.append("trees");
+			sb.append(this.output_delimiter);
+			sb.append("time");
+			sb.append(this.output_delimiter);
+			sb.append("json_cardinality");
+			sb.append("\n");
 
-		generateCustomAlgebraFeatures(this.outputFile, this.trainingQueries);
-		System.out.println("Precess finished.");
+			for (String[] q : trainingQueries) {
+				try {
+					Map<String, Object> result = fe.extractFeatures(q[1]);
+					double[] filter_features = (double[]) result.get("features");
+					// Print Id of query.
+					sb.append(q[0]);
+					sb.append(this.output_delimiter);
+					sb.append(q[1]);
+					sb.append(this.output_delimiter);
+					for (double feature : filter_features) {
+						sb.append(feature);
+						sb.append(this.output_delimiter);
+					}
+					sb.append(result.get("trees"));
+					sb.append(this.output_delimiter);
+					sb.append(q[2]);
+					sb.append(this.output_delimiter);
+					sb.append(q[3]);
+					sb.append("\n");
+
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
+			}
+			br.write(sb.toString());
+		}
+
 	}
 
 	private void generateAlgebraFeatures(String output, String[] header, List<String[]> queries) throws IOException {
@@ -349,9 +395,10 @@ public class TDBExecutionAndFeature {
 
 	}
 
-	public static void produceCustomALgebraFeatures(String inputFile, String outputFile, String configFile,
+	public static void produceLSQFeatures(String inputFile, String outputFile, String configFile,
 			String prefixFile,
-			String input_delimiter, String output_delimiter, int idColumn, int queryColumn, int execTimeColumn)
+			String input_delimiter, String output_delimiter, int idColumn, int queryColumn, int execTimeColumn,
+			int resultSizeColumn, boolean hasHeader)
 			throws Exception {
 		System.out.println("Inside custom algebra features generation");
 		if (configFile.isEmpty()) {
@@ -361,11 +408,11 @@ public class TDBExecutionAndFeature {
 		StopWatch watch = new StopWatch();
 		watch.start();
 		TDBExecutionAndFeature wrapper = new TDBExecutionAndFeature(inputFile, outputFile, configFile, prefixFile,
-				input_delimiter, output_delimiter, idColumn, queryColumn, execTimeColumn);
+				input_delimiter, output_delimiter, idColumn, queryColumn, execTimeColumn, hasHeader, resultSizeColumn);
 
-		wrapper.generateAlgebraFeatureDataset();
+		wrapper.generateLSQFeatures();
 		watch.stop();
-		System.out.println("Total time for algebra query extraction: " + watch.getTime() + " ms");
+		System.out.println("Total time for lsq features: " + watch.getTime() + " ms");
 	}
 
 }
