@@ -9,10 +9,12 @@ import org.apache.jena.sparql.algebra.op.*;
 import org.apache.jena.sparql.core.Quad;
 import org.apache.jena.sparql.core.TriplePath;
 import org.apache.jena.sparql.expr.Expr;
+import org.apache.jena.sparql.function.library.print;
 import org.apache.jena.sparql.path.*;
 import org.apache.jena.sparql.syntax.Element;
 
 import java_cup.sym;
+import liquibase.util.csv.CSVReader;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -21,6 +23,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
+import java.io.FileReader;
+import java.io.IOException;
 
 /**
  * Extracts features from the query string using the LSQ features:
@@ -71,27 +75,48 @@ public class QueryFeatureExtractorCustom {
     public static final List<String> LIST_QUERY_COLUMNS = Arrays.asList(QUERY_COLUMNS);
 
     private final Map<String, Integer> featureIndex;
-    private final double[] features;
+    private final Map<String, Integer> predicatesCardinalities;
 
-    public QueryFeatureExtractorCustom() {
+    public QueryFeatureExtractorCustom(String predicatesCardinalitiesFile) {
         featureIndex = new HashMap<>();
         for (int i = 0; i < LIST_QUERY_COLUMNS.size(); i++) {
             featureIndex.put(LIST_QUERY_COLUMNS.get(i), i);
         }
-        features = new double[LIST_QUERY_COLUMNS.size()];
+        predicatesCardinalities = new HashMap<>();
+        parsePredicatesCardinalities(predicatesCardinalitiesFile);
     }
 
-    public double[] getFeatures() {
-        return features;
+    public Integer getCardinality(String predicate) {
+        if (!predicatesCardinalities.containsKey(predicate)) {
+            return -1;
+        }
+        return predicatesCardinalities.get(predicate);
     }
 
-    private void visit(OpFilter opFilter) {
-        for (Expr expr : opFilter.getExprs().getList()) {
-            handleExpr(expr);
+    void parsePredicatesCardinalities(String predicatesCardinalitiesFile) {
+        try (CSVReader reader = new CSVReader(new FileReader(predicatesCardinalitiesFile))) {
+            // Skip header
+            reader.readNext();
+
+            String[] nextLine;
+            while ((nextLine = reader.readNext()) != null) {
+                String predicate = nextLine[0];
+                int cardinality = Integer.parseInt(nextLine[1]);
+
+                predicatesCardinalities.put(predicate, cardinality);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
-    private void handleExpr(Expr expr) {
+    private void visit(OpFilter opFilter, double[] features) {
+        for (Expr expr : opFilter.getExprs().getList()) {
+            handleExpr(expr, features);
+        }
+    }
+
+    private void handleExpr(Expr expr, double[] features) {
         if (expr.isFunction()) {
             String funcName = expr.getFunction().getFunctionSymbol().getSymbol();
             if (funcName != null) {
@@ -103,7 +128,7 @@ public class QueryFeatureExtractorCustom {
             }
             // Recursively handle function arguments
             for (Expr arg : expr.getFunction().getArgs()) {
-                handleExpr(arg);
+                handleExpr(arg, features);
             }
         } else if (expr.isVariable()) {
         } else if (expr.isConstant()) {
@@ -112,25 +137,25 @@ public class QueryFeatureExtractorCustom {
         }
     }
 
-    private void visit(OpSlice opSlice) {
+    private void visit(OpSlice opSlice, double[] features) {
         features[featureIndex.get("has_slice")] = 1;
         features[featureIndex.get("max_slice_limit")] = opSlice.getLength();
         features[featureIndex.get("max_slice_start")] = opSlice.getStart() < 0 ? 0 : opSlice.getStart();
     }
 
-    private List<Object> processBGP(OpBGP bgp) {
+    private List<Object> processBGP(OpBGP bgp, Map<String, Integer> jsonCardinalities) {
         List<Triple> triples = bgp.getPattern().getList();
-        return buildJoinTree(triples, 0);
+        return buildJoinTree(triples, 0, jsonCardinalities);
     }
 
-    private List<Object> buildJoinTree(List<Triple> triples, int index) {
+    private List<Object> buildJoinTree(List<Triple> triples, int index, Map<String, Integer> jsonCardinalities) {
         if (index >= triples.size() - 1) {
-            return Collections.singletonList(processTriple(triples.get(index)));
+            return processTriple(triples.get(index), jsonCardinalities);
         } else {
             List<Object> result = new ArrayList<>();
-            result.add("JOIN" + SEPARATOR + getJoinString(triples));
-            result.add(buildJoinTree(triples, index + 1));
-            result.add(processTriple(triples.get(index)));
+            result.add("\"\"JOIN" + SEPARATOR + getJoinString(triples) + "\"\"");
+            result.add(buildJoinTree(triples, index + 1, jsonCardinalities));
+            result.add(processTriple(triples.get(index), jsonCardinalities));
             return result;
         }
     }
@@ -143,12 +168,16 @@ public class QueryFeatureExtractorCustom {
         return String.join(SEPARATOR, predicates);
     }
 
-    private String processTriple(Triple triple) {
+    private List<Object> processTriple(Triple triple, Map<String, Integer> jsonCardinalities) {
         String subjectType = getNodeType(triple.getSubject());
         String objectType = getNodeType(triple.getObject());
         String predicateType = getNodeType(triple.getPredicate());
         String predicate = getPredicateString(triple);
-        return subjectType + "_" + predicateType + "_" + objectType + SEPARATOR + predicate;
+        jsonCardinalities.put(predicate, predicatesCardinalities.get(predicate));
+
+        String tripleStr = "\"\"" + subjectType + "_" + predicateType + "_" + objectType + SEPARATOR + predicate
+                + "\"\"";
+        return Collections.singletonList(tripleStr);
     }
 
     private String getNodeType(Node node) {
@@ -182,66 +211,88 @@ public class QueryFeatureExtractorCustom {
      * @param op
      * @return
      */
-    private List<Object> processOpTree(Op op) {
+    private List<Object> processOpTree(Op op, double[] filterFeatures, Map<String, Integer> jsonCardinalities) {
         if (op instanceof Op1) {
             if (op instanceof OpFilter) {
-                visit((OpFilter) op);
+                visit((OpFilter) op, filterFeatures);
             } else if (op instanceof OpSlice) {
-                visit((OpSlice) op);
+                visit((OpSlice) op, filterFeatures);
             }
-            return processOpTree(((Op1) op).getSubOp());
-        } else if (op instanceof OpConditional) {
-            System.out.println("Processing OpConditional: " + op);
-            List<Object> result = new ArrayList<>();
-            result.add(processOpTree(((OpConditional) op).getLeft()));
-            result.add(processOpTree(((OpConditional) op).getRight()));
-            return result;
+            return processOpTree(((Op1) op).getSubOp(), filterFeatures, jsonCardinalities);
         } else if (op instanceof OpJoin) {
             List<Object> result = new ArrayList<>();
-            result.add("JOIN");
-            result.add(processOpTree(((OpJoin) op).getLeft()));
-            result.add(processOpTree(((OpJoin) op).getRight()));
+            result.add("\"\"JOIN\"\"");
+            result.add(processOpTree(((OpJoin) op).getLeft(), filterFeatures, jsonCardinalities));
+            result.add(processOpTree(((OpJoin) op).getRight(), filterFeatures, jsonCardinalities));
             return result;
         } else if (op instanceof Op2) {
-            List<Object> left = processOpTree(((Op2) op).getLeft());
-            List<Object> right = processOpTree(((Op2) op).getRight());
+            List<Object> left = processOpTree(((Op2) op).getLeft(), filterFeatures, jsonCardinalities);
+            List<Object> right = processOpTree(((Op2) op).getRight(), filterFeatures, jsonCardinalities);
             if (left.isEmpty()) {
                 return right;
             }
             List<Object> result = new ArrayList<>();
-            result.add("LEFT_JOIN");
+            result.add("\"\"LEFT_JOIN\"\"");
             result.add(left);
             result.add(right);
             return result;
         } else if (op instanceof OpBGP) {
             OpBGP bgp = (OpBGP) op;
-            return processBGP(bgp);
+            return processBGP(bgp, jsonCardinalities);
+        } else if (op instanceof OpSequence) {
+            throw new UnsupportedOperationException("OpSequence not supported");
+        } else if (op instanceof OpPath) {
+            throw new UnsupportedOperationException("OpPath not supported");
         } else {
-            System.out.println("processOpTree Operation not supported: " + op.getName());
-            return Collections.emptyList();
+            throw new UnsupportedOperationException("Op " + op.getName() + " not supported");
         }
     }
 
     public Map<String, Object> extractFeatures(String queryStr) {
         Query query = QueryFactory.create(queryStr);
         Map<String, Object> result = new HashMap<>();
+        double[] filterFeatures = new double[QUERY_COLUMNS.length];
+        Map<String, Integer> jsonCardinalities = new HashMap<>();
         List<Object> featuresTree = new ArrayList<>();
 
         Element queryPattern = query.getQueryPattern();
         if (queryPattern != null) {
             Op op = Algebra.compile(query);
-            featuresTree = processOpTree(op);
+            featuresTree = processOpTree(op, filterFeatures, jsonCardinalities);
         }
-        result.put("features", features);
-        result.put("trees", featuresTree);
+        result.put("features", filterFeatures);
+        result.put("trees", "\"" + featuresTree + "\"");
+        StringBuilder jsonCardinalitiesStr = new StringBuilder();
+        jsonCardinalitiesStr.append("\"");
+        jsonCardinalitiesStr.append("{");
+        for (String entry : jsonCardinalities.keySet()) {
+            jsonCardinalitiesStr.append("\"\"" + entry).append("\"\"").append(":\"\"").append(getCardinality(entry))
+                    .append("\"\"")
+                    .append(",");
+        }
+        jsonCardinalitiesStr.deleteCharAt(jsonCardinalitiesStr.length() - 1);
+        jsonCardinalitiesStr.append("}");
+        jsonCardinalitiesStr.append("\"");
+        result.put("json_cardinality", jsonCardinalitiesStr);
         return result;
     }
 
+    public static void printOp(String query) {
+        Query q = QueryFactory.create(query);
+        Op op = Algebra.compile(q);
+        System.out.println(op);
+    }
+
     public static void main(String[] args) {
-        QueryFeatureExtractorCustom queryFeatureExtractor = new QueryFeatureExtractorCustom();
-        String queryStr = "PREFIX  xsd:  <http://www.w3.org/2001/XMLSchema#> PREFIX  dbpo: <http://dbpedia.org/ontology/> PREFIX  rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> PREFIX  foaf: <http://xmlns.com/foaf/0.1/> PREFIX  dbprop: <http://dbpedia.org/property/>  SELECT DISTINCT  * WHERE   { ?person  rdf:type  foaf:Person       { ?person  dbprop:viaf  ?viaf }     UNION       { ?person  dbpo:viafId  ?viaf }     UNION       { ?person  dbpo:viafId  ?viaf }     ?person  foaf:depiction  ?picture     FILTER ( str(?viaf) = \"100235826\" )     OPTIONAL       { ?person  foaf:isPrimaryTopicOf  ?wikiPage }     OPTIONAL       { ?person  dbpo:language  ?language }     OPTIONAL       { ?person  dbpo:birthPlace  ?birthPlace }     OPTIONAL       { ?person  dbpo:deathPlace  ?deathPlace }     OPTIONAL       { ?person  dbpo:nationality  ?nationality }     OPTIONAL       { ?person  dbpo:abstract  ?abstract         FILTER ( lang(?abstract) = \"es\" )       }     OPTIONAL       { ?person  dbpo:notableWork  ?notableWork }     OPTIONAL       { ?person  dbpo:movement  ?movement }   } LIMIT   10";
+        QueryFeatureExtractorCustom queryFeatureExtractor = new QueryFeatureExtractorCustom(
+                "/home/aarroyo/memoria/my_repos/data/dbpedia_predicate_count.csv");
+        String queryStr = "SELECT  ?var1 ?var2 (SAMPLE(?var3) AS ?var4) WHERE   { { SELECT DISTINCT  ?var1 ?var2       WHERE         { ?var2  <http://www.wikidata.org/prop/statement/P360>  <http://www.wikidata.org/entity/Q11774891> .           ?var1  <http://www.wikidata.org/prop/P360>  ?var2         }       LIMIT   101     }     OPTIONAL       { ?var2  ?var3                 ?var5 .         ?var6  <http://wikiba.se/ontology#qualifier>  ?var3       }   } GROUP BY ?var1 ?var2 ";
         Map<String, Object> features = queryFeatureExtractor.extractFeatures(queryStr);
-        System.out.println(Arrays.toString(queryFeatureExtractor.getFeatures()));
-        System.out.println("Trees: " + features.get("trees"));
+        printOp(queryStr);
+        System.out.println("features: " + Arrays.toString((double[]) features.get("features")));
+        System.out.println("trees: " + features.get("trees"));
+        System.out.println("json_cardinality: " + features.get("json_cardinality"));
+        // System.out.println(Arrays.toString(queryFeatureExtractor.getFeatures()));
+        // System.out.println("Trees: " + features.get("trees"));
     }
 }

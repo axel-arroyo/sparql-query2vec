@@ -264,7 +264,8 @@ public class TDBExecutionAndFeature {
 	private void generateLSQFeatures() throws IOException {
 		this.trainingQueries = SparqlUtils.getQueriesLSQ(inputQueryFile, null, idColumn, queryColumn,
 				execTimeColumn, input_delimiter.charAt(0), hasHeader, resultSizeColumn);
-		QueryFeatureExtractorCustom fe = new QueryFeatureExtractorCustom();
+		QueryFeatureExtractorCustom fe = new QueryFeatureExtractorCustom(
+				"/home/aarroyo/memoria/my_repos/data/dbpedia_predicate_count.csv");
 		String[] header = QueryFeatureExtractorCustom.QUERY_COLUMNS;
 		StringBuilder sb = new StringBuilder();
 		try (BufferedWriter br = new BufferedWriter(new FileWriter(outputFile))) {
@@ -303,7 +304,7 @@ public class TDBExecutionAndFeature {
 					sb.append(this.output_delimiter);
 					sb.append(q[2]);
 					sb.append(this.output_delimiter);
-					sb.append(q[3]);
+					sb.append(result.get("json_cardinality"));
 					sb.append("\n");
 
 				} catch (Exception ex) {
