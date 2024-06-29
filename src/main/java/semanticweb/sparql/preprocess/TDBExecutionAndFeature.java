@@ -287,7 +287,14 @@ public class TDBExecutionAndFeature {
 			sb.append("json_cardinality");
 			sb.append("\n");
 
+			int j = 0;
+			int failed = 0;
+			List<String> failedQueries = new ArrayList<>();
 			for (String[] q : trainingQueries) {
+				if (j % 1000 == 0) {
+					System.out.println(j + " queries processed");
+				}
+				j++;
 				try {
 					Map<String, Object> result = fe.extractFeatures(q[1]);
 					double[] filter_features = (double[]) result.get("features");
@@ -308,9 +315,15 @@ public class TDBExecutionAndFeature {
 					sb.append("\n");
 
 				} catch (Exception ex) {
-					ex.printStackTrace();
+					failed++;
+					failedQueries.add(q[1]);
+					if (failed % 1000 == 0) {
+						ex.printStackTrace();
+					}
 				}
 			}
+			System.out.println("Failed queries: " + failed);
+			System.out.println("First 5 failed queries: " + failedQueries.subList(0, 5));
 			br.write(sb.toString());
 		}
 

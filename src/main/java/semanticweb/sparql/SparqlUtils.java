@@ -1117,7 +1117,8 @@ public class SparqlUtils {
             int idColumn, int queryColumn, int execTimeColumn, char input_delimiter, boolean hasHeader,
             int resultSizeColumn) {
         System.out.println("Reading Queries with indexes idColumn: " + idColumn + " queryColumn: " + queryColumn
-                + " execTimeColumn: " + execTimeColumn + " resultSizeColumn: " + resultSizeColumn);
+                + " execTimeColumn: " + execTimeColumn + " resultSizeColumn: " + resultSizeColumn +
+                " input_delimiter: " + input_delimiter + " hasHeader: " + hasHeader);
         ArrayList<String[]> queries = new ArrayList<>();
         try {
             CSVReader reader = new CSVReader(new FileReader(trainingQueryFile), input_delimiter);
@@ -1125,13 +1126,16 @@ public class SparqlUtils {
             while ((line = reader.readNext()) != null) {
                 if (hasHeader) {
                     hasHeader = false;
+                    System.out.println("Header: " + Arrays.toString(line));
                     continue;
                 }
                 if (line.length < 3) {
                     // no es una tupla válida
+                    System.out.println("Invalid tuple: " + Arrays.toString(line));
                     continue;
                 }
                 if (not_include != null && not_include.contains(Integer.parseInt(line[idColumn]))) {
+                    System.out.println("Not include: " + line[idColumn]);
                     continue;
                 }
                 /*
@@ -1148,7 +1152,7 @@ public class SparqlUtils {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        System.out.println("Queries read!");
+        System.out.println("Queries read: " + queries.size() + " queries!");
         return queries;
     }
 
@@ -1455,5 +1459,12 @@ public class SparqlUtils {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public static void main(String[] args) {
+        ArrayList<Integer> not_include = null;
+        ArrayList<String[]> queries = getQueriesLSQ("/home/aarroyo/memoria/my_repos/queries_lsq_over_5_balanced.csv",
+                not_include, 0, 1, 2, 'ᶶ', true, 3);
+        System.out.println("Test: " + queries.size());
     }
 }

@@ -15,6 +15,7 @@ import org.apache.jena.sparql.syntax.Element;
 
 import java_cup.sym;
 import liquibase.util.csv.CSVReader;
+import semanticweb.sparql.SparqlUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -67,15 +68,16 @@ public class QueryFeatureExtractorCustom {
             "filter_ge", "filter_gt", "filter_isBlank", "filter_isIRI",
             "filter_isLiteral", "filter_lang", "filter_langMatches",
             "filter_le", "filter_lt", "filter_ne", "filter_not",
-            "filter_notexists", "filter_or", "filter_regex", "filter_sameTerm",
+            "filter_notexists", "filter_or", "filter_and", "filter_regex", "filter_sameTerm",
             "filter_str", "filter_strends", "filter_strstarts", "filter_subtract",
-            "has_slice", "max_slice_limit", "max_slice_start"
+            "has_slice", "max_slice_limit", "max_slice_start", "treesize"
     };
 
     public static final List<String> LIST_QUERY_COLUMNS = Arrays.asList(QUERY_COLUMNS);
 
     private final Map<String, Integer> featureIndex;
     private final Map<String, Integer> predicatesCardinalities;
+    private int treeSize = 0;
 
     public QueryFeatureExtractorCustom(String predicatesCardinalitiesFile) {
         featureIndex = new HashMap<>();
@@ -123,7 +125,7 @@ public class QueryFeatureExtractorCustom {
                 if (featureIndex.containsKey("filter_" + funcName)) {
                     features[featureIndex.get("filter_" + funcName)] = 1;
                 } else {
-                    System.out.println("Function not found in feature index: " + funcName);
+                    // System.out.println("Function not found in feature index: " + funcName);
                 }
             }
             // Recursively handle function arguments
@@ -211,23 +213,28 @@ public class QueryFeatureExtractorCustom {
      * @param op
      * @return
      */
-    private List<Object> processOpTree(Op op, double[] filterFeatures, Map<String, Integer> jsonCardinalities) {
+    private List<Object> processOpTree(Op op, double[] filterFeatures, Map<String, Integer> jsonCardinalities,
+            int level) {
+        if (treeSize < level) {
+            treeSize = level;
+        }
+
         if (op instanceof Op1) {
             if (op instanceof OpFilter) {
                 visit((OpFilter) op, filterFeatures);
             } else if (op instanceof OpSlice) {
                 visit((OpSlice) op, filterFeatures);
             }
-            return processOpTree(((Op1) op).getSubOp(), filterFeatures, jsonCardinalities);
+            return processOpTree(((Op1) op).getSubOp(), filterFeatures, jsonCardinalities, level + 1);
         } else if (op instanceof OpJoin) {
             List<Object> result = new ArrayList<>();
             result.add("\"\"JOIN\"\"");
-            result.add(processOpTree(((OpJoin) op).getLeft(), filterFeatures, jsonCardinalities));
-            result.add(processOpTree(((OpJoin) op).getRight(), filterFeatures, jsonCardinalities));
+            result.add(processOpTree(((OpJoin) op).getLeft(), filterFeatures, jsonCardinalities, level + 1));
+            result.add(processOpTree(((OpJoin) op).getRight(), filterFeatures, jsonCardinalities, level + 1));
             return result;
         } else if (op instanceof Op2) {
-            List<Object> left = processOpTree(((Op2) op).getLeft(), filterFeatures, jsonCardinalities);
-            List<Object> right = processOpTree(((Op2) op).getRight(), filterFeatures, jsonCardinalities);
+            List<Object> left = processOpTree(((Op2) op).getLeft(), filterFeatures, jsonCardinalities, level + 1);
+            List<Object> right = processOpTree(((Op2) op).getRight(), filterFeatures, jsonCardinalities, level + 1);
             if (left.isEmpty()) {
                 return right;
             }
@@ -235,6 +242,10 @@ public class QueryFeatureExtractorCustom {
             result.add("\"\"LEFT_JOIN\"\"");
             result.add(left);
             result.add(right);
+            return result;
+        } else if (op instanceof OpTable) {
+            List<Object> result = new ArrayList<>();
+            result.add("\"\"TABLE\"\"");
             return result;
         } else if (op instanceof OpBGP) {
             OpBGP bgp = (OpBGP) op;
@@ -251,16 +262,18 @@ public class QueryFeatureExtractorCustom {
     public Map<String, Object> extractFeatures(String queryStr) {
         Query query = QueryFactory.create(queryStr);
         Map<String, Object> result = new HashMap<>();
-        double[] filterFeatures = new double[QUERY_COLUMNS.length];
+        double[] features = new double[QUERY_COLUMNS.length];
         Map<String, Integer> jsonCardinalities = new HashMap<>();
         List<Object> featuresTree = new ArrayList<>();
 
         Element queryPattern = query.getQueryPattern();
         if (queryPattern != null) {
             Op op = Algebra.compile(query);
-            featuresTree = processOpTree(op, filterFeatures, jsonCardinalities);
+            treeSize = 0;
+            featuresTree = processOpTree(op, features, jsonCardinalities, 1);
+            features[featureIndex.get("treesize")] = treeSize;
         }
-        result.put("features", filterFeatures);
+        result.put("features", features);
         result.put("trees", "\"" + featuresTree + "\"");
         StringBuilder jsonCardinalitiesStr = new StringBuilder();
         jsonCardinalitiesStr.append("\"");
@@ -284,15 +297,39 @@ public class QueryFeatureExtractorCustom {
     }
 
     public static void main(String[] args) {
-        QueryFeatureExtractorCustom queryFeatureExtractor = new QueryFeatureExtractorCustom(
-                "/home/aarroyo/memoria/my_repos/data/dbpedia_predicate_count.csv");
-        String queryStr = "SELECT  ?var1 ?var2 (SAMPLE(?var3) AS ?var4) WHERE   { { SELECT DISTINCT  ?var1 ?var2       WHERE         { ?var2  <http://www.wikidata.org/prop/statement/P360>  <http://www.wikidata.org/entity/Q11774891> .           ?var1  <http://www.wikidata.org/prop/P360>  ?var2         }       LIMIT   101     }     OPTIONAL       { ?var2  ?var3                 ?var5 .         ?var6  <http://wikiba.se/ontology#qualifier>  ?var3       }   } GROUP BY ?var1 ?var2 ";
-        Map<String, Object> features = queryFeatureExtractor.extractFeatures(queryStr);
-        printOp(queryStr);
-        System.out.println("features: " + Arrays.toString((double[]) features.get("features")));
-        System.out.println("trees: " + features.get("trees"));
-        System.out.println("json_cardinality: " + features.get("json_cardinality"));
-        // System.out.println(Arrays.toString(queryFeatureExtractor.getFeatures()));
-        // System.out.println("Trees: " + features.get("trees"));
+        // QueryFeatureExtractorCustom
+
+        // QueryFeatureExtractorCustom queryFeatureExtractor = new
+        // QueryFeatureExtractorCustom(
+        // "/home/aarroyo/memoria/my_repos/data/dbpedia_predicate_count.csv");
+        // String queryStr = "PREFIX dbpo: <http://dbpedia.org/ontology/> PREFIX rdf:
+        // <http://www.w3.org/1999/02/22-rdf-syntax-ns#> PREFIX xsd:
+        // <http://www.w3.org/2001/XMLSchema#> PREFIX rdfs:
+        // <http://www.w3.org/2000/01/rdf-schema#> PREFIX foaf:
+        // <http://xmlns.com/foaf/0.1/> PREFIX dbprop: <http://dbpedia.org/property/>
+        // SELECT * WHERE { ?city rdf:type dbpo:Place ; rdfs:label \"Ommel\"@en .
+        // ?airport rdf:type dbpo:Airport { ?airport dbpo:city ?city } UNION { ?airport
+        // dbpo:location ?city } UNION { ?airport dbprop:cityServed ?city } UNION {
+        // ?airport dbpo:city ?city } { ?airport dbprop:iata ?iata } UNION { ?airport
+        // dbpo:iataLocationIdentifier ?iata } OPTIONAL { ?airport foaf:homepage
+        // ?airport_home } OPTIONAL { ?airport rdfs:label ?name } OPTIONAL { ?airport
+        // dbprop:nativename ?airport_name } FILTER ( ( ! bound(?name) ) ||
+        // langMatches(lang(?name), \"de\") ) } ";
+        // Map<String, Object> features =
+        // queryFeatureExtractor.extractFeatures(queryStr);
+        // printOp(queryStr);
+        // System.out.println("features: " + Arrays.toString((double[])
+        // features.get("features")));
+        // System.out.println("trees: " + features.get("trees"));
+        // System.out.println("json_cardinality: " + features.get("json_cardinality"));
+
+        // Read Queries
+        List<String[]> result = SparqlUtils.getQueriesLSQ("/home/aarroyo/memoria/my_repos/queries_lsq_over_5 copy.csv",
+                null,
+                0, 1, 12,
+                'ᶶ', true, 13);
+
+        // print queries size
+        System.out.println("Queries size: " + result.size());
     }
 }
